@@ -1,0 +1,67 @@
+package com.example.infraestructure.http.routes
+import com.example.application.commandhandler.ViajeBomboneraCommandHandler
+import com.example.application.command.ViajesBombonera.ViajeBomboneraCommand
+import com.example.infraestructure.persistence.ViajeBomboneraRepository
+import com.example.infraestructure.persistence.connectToMySql
+import io.ktor.server.application.*
+import io.ktor.http.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import org.jetbrains.exposed.sql.Database
+
+fun Application.viajeBomboneraRoutes() {
+    val database: Database = connectToMySql() ?: error("Error connecting to MySQL database")
+    // Conectamos al repositorio de ViajeBombonera
+    val viajeBomboneraRepository = ViajeBomboneraRepository(database)
+    val viajeBomboneraHandler = ViajeBomboneraCommandHandler(viajeBomboneraRepository)
+
+    routing {
+        // Ruta para crear o actualizar un viaje
+        post("/viajesBombonera") {
+            try {
+                val viajeBomboneraCommand = call.receive<ViajeBomboneraCommand>()
+                // Log para verificar los datos recibidos
+                println("Datos recibidos: $viajeBomboneraCommand")
+
+                // Validar el comando antes de guardar
+                viajeBomboneraCommand.validate()
+
+                // Guardar el viaje en la base de datos (crear o actualizar)
+                val viajeGuardado = viajeBomboneraHandler.handle(viajeBomboneraCommand)
+
+                // Responder con un mensaje que confirma que el viaje ha sido creado correctamente
+                val mensaje = "El viaje se ha creado correctamente"
+
+                // Responder con el mensaje de confirmación
+                call.respond(HttpStatusCode.Created, mensaje)
+            } catch (e: Exception) {
+                println("Error: ${e.message}")
+                call.respond(HttpStatusCode.BadRequest, "Error: ${e.message}")
+            }
+        }
+        get("viajeBombonera"){
+
+                try {
+                    val viajesBombonera = viajeBomboneraRepository.findAll()
+                    call.respond(viajesBombonera)
+                } catch (e: Exception) {
+                    println("❌ Error al obtener viaje: ${e.message}")
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener viaje"))
+                }
+
+        }
+        get("/viajeBomboneraFiltro") {
+            val filtro = call.request.queryParameters["filtro"]
+            val mes = call.request.queryParameters["mes"] // espera formato "MM/YYYY"
+            val pagina = call.request.queryParameters["pagina"]?.toIntOrNull() ?: 1
+            val tamanio = call.request.queryParameters["tamanio"]?.toIntOrNull() ?: 5
+
+            val viajes = viajeBomboneraRepository.buscarViajes(filtro, mes, pagina, tamanio)
+            call.respond(viajes)
+        }
+
+    }
+}
+
+

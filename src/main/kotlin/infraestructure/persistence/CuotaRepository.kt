@@ -1,0 +1,204 @@
+package com.example.infrastructure.repositories
+
+import com.example.domain.Dto.CuotaDTO
+import com.example.domain.contracts.ICuotaRepository
+
+import com.example.domain.entities.Cuota
+import com.example.domain.entities.Cuotas
+import com.example.domain.entities.Socios
+import java.time.LocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.transactions.transaction
+
+import org.jetbrains.exposed.sql.SortOrder
+
+import kotlinx.datetime.toJavaLocalDateTime
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
+
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.javatime.month
+import org.jetbrains.exposed.sql.javatime.year
+
+
+class CuotaRepository(
+    private val database: Database
+): ICuotaRepository {
+
+    init {
+        transaction(database) {
+            SchemaUtils.create(Cuotas)
+        }
+    }
+    override fun save(cuota: Cuota) {
+        transaction {
+            Cuotas.insert {
+                it[socioId] = cuota.socioId
+                it[monto] = cuota.monto
+                it[estado] = cuota.estado
+                it[fechaEmision] = cuota.fechaEmision?.toJavaLocalDateTime()
+                it[fechaVencimiento] = cuota.fechaVencimiento.toJavaLocalDateTime()
+            }
+        }
+    }
+
+
+
+    override fun findAll(): List<Cuota> = transaction(database) {
+        Cuotas.selectAll().map { rowToCuota(it) }
+    }
+
+    override fun findBySocioId(socioId: Int): List<Cuota> = transaction(database) {
+        Cuotas.select { Cuotas.socioId eq socioId }
+            .map { rowToCuota(it) }
+    }
+
+    override fun marcarComoPagada(cuotaId: Int): Boolean = transaction(database) {
+        Cuotas.update({ Cuotas.cuotaId eq cuotaId }) {
+            it[estado] = true
+        } > 0
+    }
+
+    override fun findVencidas(): List<Cuota> = transaction(database) {
+        val ahora = LocalDateTime.now()
+        Cuotas.select {
+            (Cuotas.fechaVencimiento less ahora) and (Cuotas.estado eq false)
+        }.map { rowToCuota(it) }
+    }
+
+    override fun findPendientesPorSocio(socioId: Int): List<Cuota> = transaction(database) {
+        Cuotas.select {
+            (Cuotas.socioId eq socioId) and (Cuotas.estado eq false)
+        }.map { rowToCuota(it) }
+    }
+
+override fun existeCuotaEnMes(socioId: Int, mes: Int, anio: Int): Boolean = transaction(database) {
+    val fechaInicio = LocalDateTime.of(anio, mes, 1, 0, 0)
+    val fechaFin = fechaInicio.plusMonths(1)
+
+    Cuotas.select {
+        (Cuotas.socioId eq socioId) and
+                (Cuotas.fechaEmision greaterEq fechaInicio) and
+                (Cuotas.fechaEmision less fechaFin)
+    }.count() > 0
+}
+
+
+    override fun obtenerPorId(cuotaId: Int): Cuota? = transaction(database) {
+        Cuotas.select { Cuotas.cuotaId eq cuotaId }
+            .mapNotNull { rowToCuota(it) }
+            .singleOrNull()
+    }
+
+    override fun obtenerCuotaDeMes(socioId: Int, mes: Int, anio: Int): Cuota? = transaction(database) {
+        val fechaInicio =LocalDateTime.of(anio, mes, 1, 0, 0)
+        val fechaFin = fechaInicio.plusMonths(1)
+
+        Cuotas.select {
+            (Cuotas.socioId eq socioId) and
+                    (Cuotas.fechaVencimiento greaterEq fechaInicio) and
+                    (Cuotas.fechaVencimiento less fechaFin)
+        }.mapNotNull { rowToCuota(it) }
+            .singleOrNull()
+    }
+
+    override fun obtenerUltimaCuotaDeSocio(socioId: Int): Cuota? = transaction(database) {
+        Cuotas.select { Cuotas.socioId eq socioId }
+            .orderBy(Cuotas.fechaVencimiento, SortOrder.DESC)
+            .limit(1)
+            .map { rowToCuota(it) }
+            .firstOrNull()
+    }
+//    override fun obtenerCuotasVencidasPorCobrador(cobradorId: Int): List<CuotaDTO> {
+//        return transaction {
+//            (Cuotas innerJoin Socios)
+//                .select {
+//                    Cuotas.estado eq false and
+//                            (Cuotas.fechaVencimiento less LocalDateTime.now()) and
+//                            (Socios.cobradorId eq cobradorId)
+//                }
+//                .map {
+//                    CuotaDTO(
+//                        cuotaId = it[Cuotas.cuotaId],
+//                        socioId = it[Socios.socioId],
+//                        nombreSocio = "${it[Socios.nombre]} ${it[Socios.apellido]}",
+//                        dni = it[Socios.dni],
+//                        monto = it[Cuotas.monto].toDouble(),
+//                        fechaVencimiento = it[Cuotas.fechaVencimiento],
+//                        estado = it[Cuotas.estado]
+//                    )
+//                }
+//        }
+//    }
+override fun obtenerCuotasVencidasPorCobrador(
+    cobradorId: Int,
+    mes: Int?,
+    anio: Int?,
+    dni: String?,
+    page: Int,
+    pageSize: Int
+): List<CuotaDTO> {
+    return transaction {
+        // Construir condición base
+        var condicion = (Cuotas.estado eq false) and
+                (Cuotas.fechaVencimiento less LocalDateTime.now()) and
+                (Socios.cobradorId eq cobradorId)
+
+        // Agregar filtros opcionales
+        if (mes != null && anio != null) {
+            condicion = condicion and
+                    (Cuotas.fechaVencimiento.month() eq mes) and
+                    (Cuotas.fechaVencimiento.year() eq anio)
+        }
+
+        if (!dni.isNullOrBlank()) {
+            condicion = condicion and (Socios.dni eq dni)
+        }
+
+        // 🔍 Agregar logs para depuración
+        println("⚙️ Filtros aplicados => cobradorId: $cobradorId, mes: $mes, año: $anio, dni: $dni")
+        println("📜 Condición Exposed: $condicion")
+
+        val resultados = (Cuotas innerJoin Socios)
+            .select { condicion }
+            .toList()
+
+        println("🔢 Cantidad de cuotas encontradas: ${resultados.size}")
+
+        // Aplicar paginación y mapear a DTO
+        resultados
+            .drop((page - 1) * pageSize)
+            .take(pageSize)
+            .map {
+                CuotaDTO(
+                    cuotaId = it[Cuotas.cuotaId],
+                    socioId = it[Socios.socioId],
+                    nombreSocio = "${it[Socios.nombre]} ${it[Socios.apellido]}",
+                    dni = it[Socios.dni],
+                    monto = it[Cuotas.monto].toDouble(),
+                    fechaVencimiento = it[Cuotas.fechaVencimiento],
+                    estado = it[Cuotas.estado]
+                )
+            }
+    }
+}
+
+
+
+    private fun rowToCuota(row: ResultRow): Cuota = Cuota(
+        cuotaId = row[Cuotas.cuotaId],
+        socioId = row[Cuotas.socioId],
+        monto = row[Cuotas.monto],
+        estado = row[Cuotas.estado],
+        fechaEmision = row[Cuotas.fechaEmision]?.toKotlinLocalDateTime(),
+        fechaVencimiento = row[Cuotas.fechaVencimiento].toKotlinLocalDateTime()
+    )
+
+
+}
+
+
+
+
