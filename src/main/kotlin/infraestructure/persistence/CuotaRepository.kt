@@ -15,10 +15,10 @@ import org.jetbrains.exposed.sql.SortOrder
 
 import kotlinx.datetime.toJavaLocalDateTime
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+
 import org.jetbrains.exposed.sql.javatime.month
 import org.jetbrains.exposed.sql.javatime.year
 
@@ -141,23 +141,22 @@ override fun obtenerCuotasVencidasPorCobrador(
     pageSize: Int
 ): List<CuotaDTO> {
     return transaction {
-        // Construir condición base
         var condicion = (Cuotas.estado eq false) and
                 (Cuotas.fechaVencimiento less LocalDateTime.now()) and
                 (Socios.cobradorId eq cobradorId)
 
-        // Agregar filtros opcionales
-        if (mes != null && anio != null) {
-            condicion = condicion and
-                    (Cuotas.fechaVencimiento.month() eq mes) and
-                    (Cuotas.fechaVencimiento.year() eq anio)
+        if (anio != null) {
+            condicion = condicion and (Cuotas.fechaVencimiento.year() eq anio)
+        }
+
+        if (mes != null) {
+            condicion = condicion and (Cuotas.fechaVencimiento.month() eq mes)
         }
 
         if (!dni.isNullOrBlank()) {
             condicion = condicion and (Socios.dni eq dni)
         }
 
-        // 🔍 Agregar logs para depuración
         println("⚙️ Filtros aplicados => cobradorId: $cobradorId, mes: $mes, año: $anio, dni: $dni")
         println("📜 Condición Exposed: $condicion")
 
@@ -167,7 +166,6 @@ override fun obtenerCuotasVencidasPorCobrador(
 
         println("🔢 Cantidad de cuotas encontradas: ${resultados.size}")
 
-        // Aplicar paginación y mapear a DTO
         resultados
             .drop((page - 1) * pageSize)
             .take(pageSize)
@@ -179,12 +177,15 @@ override fun obtenerCuotasVencidasPorCobrador(
                     dni = it[Socios.dni],
                     monto = it[Cuotas.monto].toDouble(),
                     fechaVencimiento = it[Cuotas.fechaVencimiento],
-                    estado = it[Cuotas.estado]
+                    estado = it[Cuotas.estado],
+                    direccionSocio = "${it[Socios.direccion]}",
+                    telefonoSocio = it[Socios.telefono]
+
+
                 )
             }
     }
 }
-
 
 
     private fun rowToCuota(row: ResultRow): Cuota = Cuota(

@@ -15,5 +15,7 @@ data class CuotaDTO(
     val monto: Double,
     @Serializable(with = LocalDateTimeSerializer::class)
     val fechaVencimiento: LocalDateTime,
-    val estado: Boolean
+    val estado: Boolean,
+    val direccionSocio: String,
+    val telefonoSocio: String
 )
