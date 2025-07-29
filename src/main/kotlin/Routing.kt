@@ -34,15 +34,19 @@ fun Application.configureRouting() {
 
     val pagoRepository = PagoRepository(database)
     val userRepository = UserRepository(database)
+
+
     val viajePagoRepository = ViajesPagosRepository(database)
     val viajeRepository = ViajeBomboneraRepository(database)
-    // Repositorios
+
+
     val socioRepository = SocioRepository(database)
     val movimientoRepository = MovimientoRepository(database)
     val sociosPeñaRepository = SociosPeñaRepository(database)
     val tipoSocioBocaRepository = TipoSocioBocaRepository(database)
     val cuotaRepository = CuotaRepository(
         database = database,
+        socioRepository = socioRepository
 
     )
 
@@ -105,6 +109,7 @@ fun Application.configureRouting() {
         movimientoRoutes(movimientoRepository, createMovimientoHandler)
         alquileresSalonesRoutes()
         salonesRoutes()
+        beneficiosRoutes()
 
         // Cuotas y Pagos
         cuotaRoutes(

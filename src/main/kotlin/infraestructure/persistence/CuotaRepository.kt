@@ -2,10 +2,12 @@ package com.example.infrastructure.repositories
 
 import com.example.domain.Dto.CuotaDTO
 import com.example.domain.contracts.ICuotaRepository
+import com.example.domain.entities.Beneficios
 
 import com.example.domain.entities.Cuota
 import com.example.domain.entities.Cuotas
 import com.example.domain.entities.Socios
+import com.example.infraestructure.persistence.SocioRepository
 import java.time.LocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
 import org.jetbrains.exposed.sql.*
@@ -24,12 +26,13 @@ import org.jetbrains.exposed.sql.javatime.year
 
 
 class CuotaRepository(
-    private val database: Database
+    private val database: Database,
+    private val socioRepository: SocioRepository
 ): ICuotaRepository {
 
     init {
         transaction(database) {
-            SchemaUtils.create(Cuotas)
+            SchemaUtils.create(Cuotas, Beneficios)
         }
     }
     override fun save(cuota: Cuota) {
@@ -55,11 +58,55 @@ class CuotaRepository(
             .map { rowToCuota(it) }
     }
 
-    override fun marcarComoPagada(cuotaId: Int): Boolean = transaction(database) {
-        Cuotas.update({ Cuotas.cuotaId eq cuotaId }) {
-            it[estado] = true
-        } > 0
+//    override fun marcarComoPagada(cuotaId: Int): Boolean = transaction(database) {
+//        Cuotas.update({ Cuotas.cuotaId eq cuotaId }) {
+//            it[estado] = true
+//        } > 0
+//    }
+override fun marcarComoPagada(cuotaId: Int): Boolean = transaction(database) {
+    // 1. Marcar la cuota como pagada
+    val filasActualizadas = Cuotas.update({ Cuotas.cuotaId eq cuotaId }) {
+        it[estado] = true
     }
+
+    if (filasActualizadas == 0) return@transaction false
+
+    // 2. Obtener el socioId de la cuota
+    val cuota = Cuotas.select { Cuotas.cuotaId eq cuotaId }.singleOrNull()
+    val socioId = cuota?.get(Cuotas.socioId) ?: return@transaction true
+
+    // 3. Contar cuotas pagadas
+    val cuotasPagadas = Cuotas.select {
+        (Cuotas.socioId eq socioId) and (Cuotas.estado eq true)
+    }.count()
+
+    // 4. Verificar si tiene deuda con el método del repository
+    val tieneDeuda = socioRepository.tieneDeuda(socioId)
+
+    // 5. Si cumple condiciones, registrar beneficio
+    if (cuotasPagadas >= 1 && !tieneDeuda) {
+        val yaTieneBeneficio = Beneficios.select {
+            Beneficios.socioId eq socioId
+        }.any()
+
+        if (!yaTieneBeneficio) {
+            Beneficios.insert {
+                it[Beneficios.socioId] = socioId
+                it[Beneficios.fechaOtorgado] = LocalDateTime.now()
+            }
+        }
+        println("▶️ Socio ID: $socioId")
+        println("✅ Cuotas pagadas: $cuotasPagadas")
+        println("🚨 Tiene deuda: $tieneDeuda")
+        println("🧾 Ya tiene beneficio: $yaTieneBeneficio")
+
+    }
+
+
+    true
+}
+
+
 
     override fun findVencidas(): List<Cuota> = transaction(database) {
         val ahora = LocalDateTime.now()
@@ -111,27 +158,7 @@ override fun existeCuotaEnMes(socioId: Int, mes: Int, anio: Int): Boolean = tran
             .map { rowToCuota(it) }
             .firstOrNull()
     }
-//    override fun obtenerCuotasVencidasPorCobrador(cobradorId: Int): List<CuotaDTO> {
-//        return transaction {
-//            (Cuotas innerJoin Socios)
-//                .select {
-//                    Cuotas.estado eq false and
-//                            (Cuotas.fechaVencimiento less LocalDateTime.now()) and
-//                            (Socios.cobradorId eq cobradorId)
-//                }
-//                .map {
-//                    CuotaDTO(
-//                        cuotaId = it[Cuotas.cuotaId],
-//                        socioId = it[Socios.socioId],
-//                        nombreSocio = "${it[Socios.nombre]} ${it[Socios.apellido]}",
-//                        dni = it[Socios.dni],
-//                        monto = it[Cuotas.monto].toDouble(),
-//                        fechaVencimiento = it[Cuotas.fechaVencimiento],
-//                        estado = it[Cuotas.estado]
-//                    )
-//                }
-//        }
-//    }
+
 override fun obtenerCuotasVencidasPorCobrador(
     cobradorId: Int,
     mes: Int?,
@@ -185,6 +212,7 @@ override fun obtenerCuotasVencidasPorCobrador(
                 )
             }
     }
+
 }
 
 
@@ -196,6 +224,8 @@ override fun obtenerCuotasVencidasPorCobrador(
         fechaEmision = row[Cuotas.fechaEmision]?.toKotlinLocalDateTime(),
         fechaVencimiento = row[Cuotas.fechaVencimiento].toKotlinLocalDateTime()
     )
+
+
 
 
 }

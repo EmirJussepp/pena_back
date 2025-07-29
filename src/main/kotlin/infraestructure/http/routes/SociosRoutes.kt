@@ -41,7 +41,7 @@ fun Application.socioRoutes() {
     val usuarioRepository = UserRepository(database)
     val localidadRepository = LocalidadRepository(database)
 
-    val cuotaRepository = CuotaRepository(database)
+    val cuotaRepository = CuotaRepository(database,socioRepository)
 
     val cuotaService = CuotaService(
         tipoSocioPeñaRepository,
