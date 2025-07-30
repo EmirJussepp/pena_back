@@ -7,6 +7,7 @@ import com.example.domain.entities.Beneficios
 import com.example.domain.entities.Cuota
 import com.example.domain.entities.Cuotas
 import com.example.domain.entities.Socios
+import com.example.infraestructure.persistence.BeneficioRepository
 import com.example.infraestructure.persistence.SocioRepository
 import java.time.LocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
@@ -27,7 +28,7 @@ import org.jetbrains.exposed.sql.javatime.year
 
 class CuotaRepository(
     private val database: Database,
-    private val socioRepository: SocioRepository
+    private val beneficioRepository: BeneficioRepository
 ): ICuotaRepository {
 
     init {
@@ -75,33 +76,8 @@ override fun marcarComoPagada(cuotaId: Int): Boolean = transaction(database) {
     val cuota = Cuotas.select { Cuotas.cuotaId eq cuotaId }.singleOrNull()
     val socioId = cuota?.get(Cuotas.socioId) ?: return@transaction true
 
-    // 3. Contar cuotas pagadas
-    val cuotasPagadas = Cuotas.select {
-        (Cuotas.socioId eq socioId) and (Cuotas.estado eq true)
-    }.count()
-
-    // 4. Verificar si tiene deuda con el método del repository
-    val tieneDeuda = socioRepository.tieneDeuda(socioId)
-
-    // 5. Si cumple condiciones, registrar beneficio
-    if (cuotasPagadas >= 1 && !tieneDeuda) {
-        val yaTieneBeneficio = Beneficios.select {
-            Beneficios.socioId eq socioId
-        }.any()
-
-        if (!yaTieneBeneficio) {
-            Beneficios.insert {
-                it[Beneficios.socioId] = socioId
-                it[Beneficios.fechaOtorgado] = LocalDateTime.now()
-            }
-        }
-        println("▶️ Socio ID: $socioId")
-        println("✅ Cuotas pagadas: $cuotasPagadas")
-        println("🚨 Tiene deuda: $tieneDeuda")
-        println("🧾 Ya tiene beneficio: $yaTieneBeneficio")
-
-    }
-
+    // 3. Actualizar beneficio según condiciones actuales
+    beneficioRepository.actualizarBeneficioSiCorresponde(socioId)
 
     true
 }

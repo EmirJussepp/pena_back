@@ -19,5 +19,6 @@ interface ICuotaRepository {
     fun obtenerCuotasVencidasPorCobrador(cobradorId: Int, mes: Int?, anio: Int?,
                                          dni: String?, page: Int,
                                          pageSize: Int): List<CuotaDTO>
+
 }
 

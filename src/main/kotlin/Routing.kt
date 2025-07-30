@@ -28,33 +28,37 @@ fun Application.configureRouting() {
             call.respondText(text = "500: $cause", status = HttpStatusCode.InternalServerError)
         }
     }
-
     val database = connectToMySql() ?: error("Error connecting to MySQL")
 
+    lateinit var beneficioRepository: BeneficioRepository
 
+// Primero creamos socioRepository, pasando una lambda que retorna la instancia de beneficioRepository que aún no está inicializada
+    val socioRepository = SocioRepository(database) { beneficioRepository}
+
+// Ahora inicializamos beneficioRepository con socioRepository ya creado
+    beneficioRepository = BeneficioRepository(database, socioRepository)
+
+// Luego continuás con el resto
     val pagoRepository = PagoRepository(database)
     val userRepository = UserRepository(database)
-
-
     val viajePagoRepository = ViajesPagosRepository(database)
     val viajeRepository = ViajeBomboneraRepository(database)
-
-
-    val socioRepository = SocioRepository(database)
     val movimientoRepository = MovimientoRepository(database)
     val sociosPeñaRepository = SociosPeñaRepository(database)
     val tipoSocioBocaRepository = TipoSocioBocaRepository(database)
+
     val cuotaRepository = CuotaRepository(
         database = database,
-        socioRepository = socioRepository
-
+        beneficioRepository = beneficioRepository
     )
+
 
     val cuotaService = CuotaService(
         tipoSocioPeñaRepository = sociosPeñaRepository,
         tipoSocioBocaRepository = tipoSocioBocaRepository,
         socioRepository= socioRepository,
-        cuotaRepository = cuotaRepository
+        cuotaRepository = cuotaRepository,
+        beneficioRepository = beneficioRepository
     )
     cuotaService.iniciarSchedulerCuotasMensuales()
 

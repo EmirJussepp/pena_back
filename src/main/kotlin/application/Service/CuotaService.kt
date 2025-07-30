@@ -6,6 +6,7 @@ import com.example.domain.contracts.ISocioPeñaContract
 import com.example.domain.contracts.ISocioRepository
 import com.example.domain.entities.Cuota
 import com.example.domain.entities.Socio
+import com.example.infraestructure.persistence.BeneficioRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -14,8 +15,9 @@ import kotlinx.datetime.*
 
 
 import java.math.BigDecimal
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.minutes
+
+import kotlin.time.Duration.Companion.days
+
 //
 //
 //class CuotaService(
@@ -109,7 +111,8 @@ class CuotaService(
     private val tipoSocioPeñaRepository: ISocioPeñaContract,
     private val tipoSocioBocaRepository: ISocioBocaContract,
     private val cuotaRepository: ICuotaRepository,
-    private val socioRepository: ISocioRepository
+    private val socioRepository: ISocioRepository,
+    private val beneficioRepository: BeneficioRepository
 ) {
 
     fun calcularMontoParaSocio(socio: Socio): BigDecimal {
@@ -141,6 +144,7 @@ class CuotaService(
         )
 
         cuotaRepository.save(cuota)
+        beneficioRepository.actualizarBeneficioSiCorresponde(socio.socioId)
         println("✅ Cuota inicial generada para el socio ${socio.socioId} - $mesActual/$anioActual")
     }
     fun generarCuotasMensuales() {
@@ -176,6 +180,7 @@ class CuotaService(
         )
 
         cuotaRepository.save(cuota)
+        beneficioRepository.actualizarBeneficioSiCorresponde(socio.socioId)
         println("✅ Cuota generada para el socio ${socio.socioId} con monto $montoTotal")
     }
 
@@ -211,6 +216,8 @@ class CuotaService(
             // Sumás un mes para siguiente iteración:
             fecha = fecha.date.plus(1, DateTimeUnit.MONTH).atTime(0, 0)
         }
+        beneficioRepository.actualizarBeneficioSiCorresponde(socioId)
+
     }
 
     fun iniciarSchedulerCuotasMensuales() {
@@ -219,7 +226,7 @@ class CuotaService(
                 val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
                 println("🕐 Ejecutando scheduler a las $now")
                 generarCuotasMensuales()
-                delay(1.minutes)
+                delay(1.days)
             }
         }
     }

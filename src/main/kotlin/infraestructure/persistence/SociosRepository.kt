@@ -12,16 +12,19 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
 
+class SocioRepository(
+    private val database: Database,
+    private val getBeneficioRepository: () -> BeneficioRepository
+) : ISocioRepository {
 
-class SocioRepository(private val database: Database) : ISocioRepository {
+    private val beneficioRepository by lazy { getBeneficioRepository() }
 
     init {
         transaction(database) {
             SchemaUtils.create(Socios)
         }
     }
-
-    override fun save(socio: Socio): Socio {
+override fun save(socio: Socio): Socio {
         return transaction(database) {
 
             val existingSocio = Socios.select { Socios.dni eq socio.dni }.singleOrNull()
@@ -229,7 +232,16 @@ fun darDeBajaPorId(socioId: Int): Boolean {
             it[fechaDeBaja] = ahora
         }
         println("Socios actualizados: $actualizados con fecha $ahora")
-        actualizados > 0
+
+        if (actualizados > 0) {
+            // Si se dio de baja correctamente, actualizar beneficios
+            beneficioRepository.actualizarBeneficioSiCorresponde(socioId)
+            println("🟡 Socio dado de baja y beneficios actualizados para el Socio ID: $socioId")
+            true
+        } else {
+            false
+        }
+
     }
 }
 
@@ -242,12 +254,20 @@ fun darDeBajaPorId(socioId: Int): Boolean {
 
     fun reactivarSocio(socioId: Int): Boolean {
         return transaction(database) {
-            Socios.update({ Socios.socioId eq socioId }) {
+            val actualizado = Socios.update({ Socios.socioId eq socioId }) {
                 it[estado] = true
                 it[fechaDeBaja] = null
             } > 0
+
+            if (actualizado) {
+                beneficioRepository.actualizarBeneficioSiCorresponde(socioId)
+                println("🟢 Socio reactivado y beneficios actualizados para Socio ID: $socioId")
+            }
+
+            actualizado
         }
     }
+
 
     override suspend fun update(socio: Socio): Socio {
         return transaction(database) {
@@ -378,6 +398,14 @@ fun darDeBajaPorId(socioId: Int): Boolean {
                     (Cuotas.estado eq false) and
                     (Cuotas.fechaVencimiento less ahora)
         }.count() > 0
+    }
+    fun tieneDeudade2Cuotas(socioId: Int): Boolean = transaction(database) {
+        val ahora = LocalDateTime.now()
+        Cuotas.select {
+            (Cuotas.socioId eq socioId) and
+                    (Cuotas.estado eq false) and
+                    (Cuotas.fechaVencimiento less ahora)
+        }.count() > 2 // Cambié de >0 a >2
     }
 
 

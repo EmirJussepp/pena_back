@@ -13,11 +13,6 @@ import com.example.application.command.Socios.CreateSocioCommand
 import com.example.application.querys.ObtenerSocioIdQuery
 import com.example.application.querys.ObtenerSocioPorNombreQuery
 import com.example.application.querysHandler.GetSocioQueryHandler
-import com.example.infraestructure.persistence.CobradorRepository
-import com.example.infraestructure.persistence.TipoSocioBocaRepository
-import com.example.infraestructure.persistence.SociosPeñaRepository
-import com.example.infraestructure.persistence.LocalidadRepository
-import com.example.infraestructure.persistence.UserRepository
 
 import com.example.application.querysHandler.ObtenerSocioIdHandler
 import com.example.application.querysHandler.ObtenerSocioNombreHandler
@@ -26,28 +21,34 @@ import com.example.domain.Dto.SocioUpdateDTO
 
 import com.example.domain.Mappers.mapearUpdateDTOaEntidad
 import com.example.domain.entities.SociosPage
-import com.example.infraestructure.persistence.SocioRepository
-import com.example.infraestructure.persistence.connectToMySql
+import com.example.infraestructure.persistence.*
 import com.example.infrastructure.repositories.CuotaRepository
 import org.jetbrains.exposed.sql.Database
 
 fun Application.socioRoutes() {
     val database: Database = connectToMySql() ?: error("Error connecting to MySQL database")
-    // Conectar a MySQL
-    val socioRepository = SocioRepository(database)
+
+    lateinit var beneficioRepository: BeneficioRepository
+
+    val socioRepository = SocioRepository(database) { beneficioRepository }
+
+    beneficioRepository = BeneficioRepository(database, socioRepository)
+
     val cobradorRepository = CobradorRepository(database)
     val tipoSocioPeñaRepository = SociosPeñaRepository(database)
     val tipoBocaRepository = TipoSocioBocaRepository(database)
     val usuarioRepository = UserRepository(database)
     val localidadRepository = LocalidadRepository(database)
 
-    val cuotaRepository = CuotaRepository(database,socioRepository)
+    val cuotaRepository = CuotaRepository(database, beneficioRepository)
 
     val cuotaService = CuotaService(
         tipoSocioPeñaRepository,
         tipoBocaRepository,
         cuotaRepository,
-        socioRepository
+        socioRepository,
+        beneficioRepository
+
     )
 
     val createSocioHandler = CreateSocioHandler(
@@ -60,13 +61,7 @@ fun Application.socioRoutes() {
         cuotaService
     )
 
-//    val getSocioQueryHandler = GetSocioQueryHandler(
-//        socioRepository,
-//        cobradorRepository,
-//        tipoSocioPeñaRepository,
-//        tipoBocaRepository,
-//        localidadRepository
-//    )
+
     val obtenerSocioIdHandler = ObtenerSocioIdHandler(socioRepository) // 🔹 Aquí creamos la instancia
 
     val obtenerSocioNombreHandler = ObtenerSocioNombreHandler(socioRepository)
