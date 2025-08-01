@@ -19,6 +19,6 @@ data class SocioDTO(
     val fechaDeBaja: LocalDateTime?,
     val cobradorNombre: String,
     val tipoPeñaNombre: String,
-    val tipoBocaNombre: String,
+    val tipoBocaNombre: String?= null,
     val localidadNombre: String
 )

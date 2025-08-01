@@ -17,7 +17,7 @@ fun mapearSocioDTO(
 ): SocioDTO {
     val cobrador = cobradorRepo.findById(socio.cobradorId)
     val tipoPeña = peñaRepo.findById(socio.tipoSocioPeñaId)
-    val tipoBoca = bocaRepo.findById(socio.tipoBocaId)
+    val tipoBoca = socio.tipoBocaId?.let { bocaRepo.findById(it) }
     val localidad = localidadRepo.findById(socio.localidadId)
 
     return SocioDTO(

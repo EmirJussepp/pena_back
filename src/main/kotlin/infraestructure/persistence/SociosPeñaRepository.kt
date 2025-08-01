@@ -1,12 +1,10 @@
 package com.example.infraestructure.persistence
 
 import com.example.domain.contracts.ISocioPeñaContract
-import com.example.domain.entities.TipoSocioBoca
-import com.example.domain.entities.TiposSocioPeña
-import com.example.domain.entities.TipoSocioPeña
-import com.example.domain.entities.TiposSocioBoca
+import com.example.domain.entities.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+
 import org.jetbrains.exposed.sql.transactions.transaction
 
 
@@ -59,14 +57,29 @@ class SociosPeñaRepository(private val database: Database) : ISocioPeñaContrac
         }
     }
     override fun actualizar(tipo: TipoSocioPeña) {
+        val id = tipo.tipoSocioPeñaId ?: throw IllegalArgumentException("El ID no puede ser nulo")
+
         transaction(database) {
-            TiposSocioPeña.update({ TiposSocioPeña.tipoSocioPeñaId eq tipo.tipoSocioPeñaId!! }) {
+            val updatedRows = TiposSocioPeña.update({ TiposSocioPeña.tipoSocioPeñaId eq id }) {
                 it[nombre] = tipo.nombre
                 it[precio] = tipo.precio
             }
+
+            if (updatedRows == 0) {
+                throw IllegalStateException("No se encontró el tipoSocioPeña con ID $id para actualizar")
+            }
+
+            // Actualizar las cuotas no pagadas para este tipo
+            Cuotas.update({
+                (Cuotas.estado eq false) and
+                        (Cuotas.socioId inSubQuery
+                                Socios.slice(Socios.socioId).select { Socios.tipoSocioPeñaId eq id }
+                                )
+            }) {
+                it[monto] = tipo.precio.toBigDecimal()
+            }
         }
     }
-
     override fun obtenerTodos(): List<TipoSocioPeña> {
         return transaction(database) {
             TiposSocioPeña.selectAll().map {

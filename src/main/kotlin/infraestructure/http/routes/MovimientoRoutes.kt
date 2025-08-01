@@ -89,59 +89,7 @@ fun Application.movimientoRoutes(
             }
         }
 
-//
-//        get("/balance") {
-//            try {
-//                // Calcula el balance total llamando a calcularBalance del repository
-//                val balance = movimientoRepository.calcularBalance()  // Asegúrate que este método esté en MovimientoRepository
-//
-//                // Responde con el balance total calculado
-//                call.respond(HttpStatusCode.OK, mapOf("balance" to balance))
-//            } catch (e: Exception) {
-//                // En caso de error, responde con un error 500
-//                println("❌ Error al calcular balance: ${e.message}")
-//                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al calcular balance"))
-//            }
-//        }
-//        get("/balance/semanal") {
-//            try {
-//                val desdeStr = call.request.queryParameters["desde"]
-//                val hastaStr = call.request.queryParameters["hasta"]
-//
-//                if (desdeStr == null || hastaStr == null) {
-//                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Parámetros 'desde' y 'hasta' requeridos"))
-//                    return@get
-//                }
-//
-//                val desde = LocalDate.parse(desdeStr)
-//                val hasta = LocalDate.parse(hastaStr)
-//
-//                val (balance, movimientos) = movimientoRepository.calcularBalanceSemanal(desde, hasta)
-//
-//                call.respond(HttpStatusCode.OK, BalanceResponse(balance.toDouble(), movimientos))
-//            } catch (e: Exception) {
-//                println("❌ Error en balance semanal: ${e.message}")
-//                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al calcular balance semanal"))
-//            }
-//        }
-//
-//        get("/balance/mensual") {
-//            try {
-//                val mesParam = call.request.queryParameters["mes"] // formato: 2024-08
-//                if (mesParam == null) {
-//                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Parámetro 'mes' requerido"))
-//                    return@get
-//                }
-//
-//                val yearMonth = YearMonth.parse(mesParam)
-//                val (balance, movimientos) = movimientoRepository.calcularBalanceMensual(yearMonth)
-//                call.respond(HttpStatusCode.OK, BalanceResponse(balance.toDouble(), movimientos))
-//
-//            } catch (e: Exception) {
-//                println("❌ Error en balance mensual: ${e.message}")
-//                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al calcular balance mensual"))
-//            }
-//        }
+
         get("/balance") {
             try {
                 val balance = movimientoRepository.calcularBalance()

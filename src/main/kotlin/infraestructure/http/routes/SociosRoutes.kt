@@ -44,7 +44,6 @@ fun Application.socioRoutes() {
 
     val cuotaService = CuotaService(
         tipoSocioPeñaRepository,
-        tipoBocaRepository,
         cuotaRepository,
         socioRepository,
         beneficioRepository

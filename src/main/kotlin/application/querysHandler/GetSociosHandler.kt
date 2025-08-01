@@ -23,7 +23,7 @@ class GetSocioQueryHandler(
     fun toDto(socio: Socio): SocioDTO {
         val cobradorNombre = cobradorRepository.findById(socio.cobradorId)?.nombre ?: "Desconocido"
         val tipoPeñaNombre = tipoSocioPeñaRepository.findById(socio.tipoSocioPeñaId)?.nombre ?: "Desconocido"
-        val tipoBocaNombre = tipoSocioBocaRepository.findById(socio.tipoBocaId)?.nombre ?: "Desconocido"
+        val tipoBocaNombre = socio.tipoBocaId?.let { tipoSocioBocaRepository.findById(it)?.nombre } ?: "-"
         val localidadNombre = localidadRepository.findById(socio.localidadId)?.nombre ?: "Desconocido"
         val fechaInicio = socio.fechaInicio
 

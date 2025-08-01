@@ -16,10 +16,9 @@ data class CreateSocioCommand(
     val telefono: String,
     val cobradorId: Int,
     val tipoSocioPeñaId: Int,
-    val tipoBocaId: Int,
-    val userId: Int,
+    val tipoBocaId: Int?,
+    val userId: Int?,
     val localidadId: Int,
-    val estado: Boolean,
     val direccion: String?
 ) {
     fun validate(): List<String> {
@@ -40,8 +39,8 @@ data class CreateSocioCommand(
         // Validaciones de relaciones
         if (cobradorId <= 0) errors.add("El ID del cobrador es inválido")
         if (tipoSocioPeñaId <= 0) errors.add("El ID del tipo de socio peña es inválido")
-        if (tipoBocaId <= 0) errors.add("El ID del tipo de boca es inválido")
-        if (userId <= 0) errors.add("El ID del usuario es inválido")
+
+
         if (localidadId <= 0) errors.add("El ID de la localidad es inválido")
 
         return errors

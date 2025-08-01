@@ -24,8 +24,8 @@ object Socios : Table("socios") {
     // Definir las relaciones
     val cobradorId = integer("cobrador_id").references(Cobradores.cobradoresId)
     val tipoSocioPeñaId = integer("tipo_id_socioPeña").references(TiposSocioPeña.tipoSocioPeñaId)
-    val tipoBocaId = integer("tipo_boca_id").references(TiposSocioBoca.tipoSocioBocaId)
-    val userId = integer("user_id").references(Users.userId)
+    val tipoBocaId = integer("tipo_boca_id").references(TiposSocioBoca.tipoSocioBocaId).nullable()
+    val userId = integer("user_id").references(Users.userId).nullable()
     val localidadId = integer("localidad_id").references(Localidades.localidadId)
     val estado = bool("estado")
     val fechaDeBaja = datetime("fecha_de_baja").nullable()
@@ -46,8 +46,8 @@ data class Socio(
     @Contextual val fechaInicio: LocalDateTime,
     val cobradorId: Int,
     val tipoSocioPeñaId: Int,
-    val tipoBocaId: Int,
-    val userId: Int,
+    val tipoBocaId: Int?,
+    val userId: Int?,
     val localidadId: Int,
     val estado: Boolean,
     @Contextual val fechaDeBaja: LocalDateTime? = null,
@@ -65,10 +65,9 @@ data class Socio(
             fechaInicio: LocalDateTime,
             cobradorId: Int,
             tipoSocioPeñaId: Int,
-            tipoBocaId: Int,
-            userId: Int,
+            tipoBocaId: Int?,
+            userId: Int?,
             localidadId: Int,
-            estado: Boolean,
             fechaDeBaja: LocalDateTime? = null,
             direccion: String?
         ): Socio {
@@ -87,7 +86,7 @@ data class Socio(
                 tipoBocaId = tipoBocaId,
                 userId = userId,
                 localidadId = localidadId,
-                estado = estado,
+                estado = true,
                 fechaDeBaja = fechaDeBaja,
                 direccion= direccion
             )
@@ -96,10 +95,10 @@ data class Socio(
 
     fun calcularMontoCuota(
         getMontoPeña: (Int) -> Double?,
-        getMontoBoca: (Int) -> Double?
+
     ): BigDecimal {
         val montoPeña = getMontoPeña(tipoSocioPeñaId) ?: 0.0
-        val montoBoca = getMontoBoca(tipoBocaId) ?: 0.0
-        return BigDecimal(montoPeña + montoBoca)
+        // montoBoca ya no se usa
+        return BigDecimal(montoPeña)
     }
 }

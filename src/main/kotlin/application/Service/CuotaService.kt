@@ -1,11 +1,13 @@
 package com.example.application.Service
 
 import com.example.domain.contracts.ICuotaRepository
-import com.example.domain.contracts.ISocioBocaContract
+
 import com.example.domain.contracts.ISocioPeñaContract
 import com.example.domain.contracts.ISocioRepository
 import com.example.domain.entities.Cuota
+
 import com.example.domain.entities.Socio
+
 import com.example.infraestructure.persistence.BeneficioRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,102 +16,14 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.*
 
 
+
 import java.math.BigDecimal
 
 import kotlin.time.Duration.Companion.days
 
-//
-//
-//class CuotaService(
-//    private val tipoSocioPeñaRepository: ISocioPeñaContract,
-//    private val tipoSocioBocaRepository: ISocioBocaContract,
-//    private val cuotaRepository: ICuotaRepository,
-//    private val socioRepository: ISocioRepository
-//) {
-//
-//    fun calcularMontoParaSocio(socio: Socio): BigDecimal {
-//        return socio.calcularMontoCuota(
-//            getMontoPeña = { tipoSocioPeñaRepository.getMontoById(it)?.toDouble() },
-//            getMontoBoca = { tipoSocioBocaRepository.getMontoById(it)?.toDouble() }
-//        )
-//    }
-//
-//    fun generarCuotaParaNuevoSocio(socio: Socio) {
-//        val ahora = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-//        val mesActual = ahora.monthNumber
-//        val anioActual = ahora.year
-//
-//        if (cuotaRepository.existeCuotaEnMes(socio.socioId!!, mesActual, anioActual)) {
-//            println("⚠️ Ya existe una cuota para el socio ${socio.socioId} en $mesActual/$anioActual")
-//            return
-//        }
-//
-//        val monto = calcularMontoParaSocio(socio)
-//        val fechaEmision = ahora
-//        val fechaVencimiento = LocalDate(ahora.year, ahora.month, 4).atTime(0, 0)
-//
-//        val cuota = Cuota.create(
-//            socioId = socio.socioId,
-//            monto = monto,
-//            fechaEmision = fechaEmision,
-//            fechaVencimiento = fechaVencimiento
-//        )
-//
-//        cuotaRepository.save(cuota)
-//        println("✅ Cuota inicial generada para el socio ${socio.socioId} - $mesActual/$anioActual")
-//    }
-//
-//    fun generarCuotasMensuales() {
-//        val socios = socioRepository.obtenerTodos()
-//
-//        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-//        val fechaEmision = now
-//
-//        val fechaVencimiento = now.date
-//            .plus(1, DateTimeUnit.MONTH)
-//            .let { LocalDate(it.year, it.month, 5) } // día 5 del mes siguiente
-//            .atTime(0, 0)
-//
-//        val mes = fechaEmision.monthNumber
-//        val anio = fechaEmision.year
-//
-//        for (socio in socios) {
-//            if (!cuotaRepository.existeCuotaEnMes(socio.socioId!!, mes, anio)) {
-//                crearNuevaCuota(socio, fechaEmision, fechaVencimiento)
-//            }
-//        }
-//    }
-//
-//    private fun crearNuevaCuota(socio: Socio, fechaEmision: LocalDateTime, fechaVencimiento: LocalDateTime) {
-//        val montoTotal = calcularMontoParaSocio(socio)
-//
-//        val cuota = Cuota.create(
-//            socioId = socio.socioId!!,
-//            monto = montoTotal,
-//            fechaEmision = fechaEmision,
-//            fechaVencimiento = fechaVencimiento
-//        )
-//
-//        cuotaRepository.save(cuota)
-//        println("✅ Cuota generada para el socio ${socio.socioId} con monto $montoTotal")
-//    }
-//
-//    fun iniciarSchedulerCuotasMensuales() {
-//        CoroutineScope(Dispatchers.Default).launch {
-//            while (true) {
-//                val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-//                println("🕐 Ejecutando scheduler a las $now")
-//                generarCuotasMensuales()
-//                delay(1.minutes)
-//            }
-//        }
-//    }
-//}
-//
-//
+
 class CuotaService(
     private val tipoSocioPeñaRepository: ISocioPeñaContract,
-    private val tipoSocioBocaRepository: ISocioBocaContract,
     private val cuotaRepository: ICuotaRepository,
     private val socioRepository: ISocioRepository,
     private val beneficioRepository: BeneficioRepository
@@ -118,9 +32,12 @@ class CuotaService(
     fun calcularMontoParaSocio(socio: Socio): BigDecimal {
         return socio.calcularMontoCuota(
             getMontoPeña = { tipoSocioPeñaRepository.getMontoById(it)?.toDouble() },
-            getMontoBoca = { tipoSocioBocaRepository.getMontoById(it)?.toDouble() }
+
         )
     }
+
+
+
 
     fun generarCuotaParaNuevoSocio(socio: Socio) {
         val ahora = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
@@ -134,7 +51,7 @@ class CuotaService(
 
         val monto = calcularMontoParaSocio(socio)
         val fechaEmision = ahora
-        val fechaVencimiento = LocalDate(ahora.year, ahora.month, 4).atTime(0, 0)
+        val fechaVencimiento = LocalDate(ahora.year, ahora.month, 1).atTime(0, 0)
 
         val cuota = Cuota.create(
             socioId = socio.socioId,
@@ -155,12 +72,14 @@ class CuotaService(
 
         val fechaVencimiento = now.date
             .plus(1, DateTimeUnit.MONTH)
-            .let { LocalDate(it.year, it.month, 5) }
+            .let { LocalDate(it.year, it.month, 1) }
             .atTime(0, 0)
 
         val mes = fechaEmision.monthNumber
         val anio = fechaEmision.year
 
+//        val mes = fechaVencimiento.monthNumber  // <-- usar mes y año de fechaVencimiento
+//        val anio = fechaVencimiento.year
         for (socio in sociosActivos) {
             if (!cuotaRepository.existeCuotaEnMes(socio.socioId!!, mes, anio)) {
                 crearNuevaCuota(socio, fechaEmision, fechaVencimiento)
@@ -199,7 +118,7 @@ class CuotaService(
             if (!cuotaRepository.existeCuotaEnMes(socioId, mes, anio)) {
                 val monto = calcularMontoParaSocio(socio)
                 val fechaVencimiento = fecha.date.let {
-                    LocalDate(it.year, it.month, 5)
+                    LocalDate(it.year, it.month, 1)
                 }.atTime(0, 0)
 
                 val cuota = Cuota.create(

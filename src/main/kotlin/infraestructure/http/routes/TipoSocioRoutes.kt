@@ -46,7 +46,7 @@ fun Application.socioBocaRoutes() {
                 println("Error: ${e.message}")
             }
         }
-        patch("/sociosboca/precio/{id}") {
+        patch("/sociosboca/{id}") {
             try {
                 val id = call.parameters["id"]?.toIntOrNull()
                     ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
@@ -55,8 +55,7 @@ fun Application.socioBocaRoutes() {
 
                 val command = UpdateTipoSocioBocaCommand(
                     tipoSocioBocaId = id,
-                    nombre = datos.nombre,
-                    precio = datos.precio
+                    nombre = datos.nombre
                 )
 
                 val handler = UpdateTipoSocioBocaHandler(tipoSocioBocaRepository)

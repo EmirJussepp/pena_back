@@ -8,22 +8,22 @@ import com.example.domain.entities.Cuota
 import com.example.domain.entities.Cuotas
 import com.example.domain.entities.Socios
 import com.example.infraestructure.persistence.BeneficioRepository
-import com.example.infraestructure.persistence.SocioRepository
+import kotlinx.datetime.*
+
 import java.time.LocalDateTime
-import kotlinx.datetime.toKotlinLocalDateTime
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 import org.jetbrains.exposed.sql.SortOrder
 
-import kotlinx.datetime.toJavaLocalDateTime
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 
 
 import org.jetbrains.exposed.sql.javatime.month
 import org.jetbrains.exposed.sql.javatime.year
+import java.math.BigDecimal
 
 
 class CuotaRepository(
@@ -105,6 +105,10 @@ override fun existeCuotaEnMes(socioId: Int, mes: Int, anio: Int): Boolean = tran
         (Cuotas.socioId eq socioId) and
                 (Cuotas.fechaEmision greaterEq fechaInicio) and
                 (Cuotas.fechaEmision less fechaFin)
+//        Cuotas.select {
+//            (Cuotas.socioId eq socioId) and
+//                    (Cuotas.fechaVencimiento greaterEq fechaInicio) and
+//                    (Cuotas.fechaVencimiento less fechaFin)
     }.count() > 0
 }
 
@@ -144,10 +148,16 @@ override fun obtenerCuotasVencidasPorCobrador(
     pageSize: Int
 ): List<CuotaDTO> {
     return transaction {
-        var condicion = (Cuotas.estado eq false) and
-                (Cuotas.fechaVencimiento less LocalDateTime.now()) and
-                (Socios.cobradorId eq cobradorId)
+//        var condicion = (Cuotas.estado eq false) and
+//               (Cuotas.fechaVencimiento less LocalDateTime.now()) and
+//                (Socios.cobradorId eq cobradorId)
+        val ahora = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        val inicioDeHoy = LocalDateTime(ahora.year, ahora.monthNumber, ahora.dayOfMonth, 0, 0)
+        val inicioDeHoyJava = inicioDeHoy.toJavaLocalDateTime()
 
+        var condicion = (Cuotas.estado eq false) and
+                (Cuotas.fechaVencimiento lessEq inicioDeHoyJava) and
+                (Socios.cobradorId eq cobradorId)
         if (anio != null) {
             condicion = condicion and (Cuotas.fechaVencimiento.year() eq anio)
         }
@@ -190,6 +200,19 @@ override fun obtenerCuotasVencidasPorCobrador(
     }
 
 }
+    override fun actualizarCuotasNoPagadas(tipoPeñaId: Int, nuevoMonto: BigDecimal) {
+        transaction {
+            Cuotas.update({
+                (Cuotas.estado eq false) and
+                        (Cuotas.socioId inSubQuery
+                                Socios.slice(Socios.socioId)
+                                    .select { Socios.tipoSocioPeñaId eq tipoPeñaId }
+                                )
+            }) {
+                it[monto] = nuevoMonto
+            }
+        }
+    }
 
 
     private fun rowToCuota(row: ResultRow): Cuota = Cuota(

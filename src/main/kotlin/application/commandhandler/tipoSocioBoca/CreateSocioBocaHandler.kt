@@ -13,8 +13,7 @@ class CreateTipoSocioBocaCommandHandler(
 
             // Creamos el tipo de socio boca y lo guardamos
             val tipoSocioBoca = TipoSocioBoca.create(
-                command.nombre,
-                command.precio
+                command.nombre
             )
             tipoSocioBocaRepository.save(tipoSocioBoca)
 

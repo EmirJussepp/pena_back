@@ -29,11 +29,14 @@ class CreateCuotaCommandHandler(
             val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
             val fechaEmision = now
 
-            // 📆 Calcular vencimiento para el día 4 del mes siguiente
+//             📆 Calcular vencimiento para el día 4 del mes siguiente
             val fechaVencimiento = now.date
                 .plus(1, DateTimeUnit.MONTH)
-                .let { LocalDate(it.year, it.month, 4) }
+                .let { LocalDate(it.year, it.month, 1) }
                 .atTime(0, 0)
+//            val fechaVencimiento = now.date
+//                .let { LocalDate(it.year, it.month, 1) }
+//                .atTime(0, 0)
 
             // 📆 Determinar mes y año a validar (de la fecha actual o del comando)
             val fechaBase = fechaVencimiento

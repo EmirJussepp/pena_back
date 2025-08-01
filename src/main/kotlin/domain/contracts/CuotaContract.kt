@@ -4,6 +4,7 @@ package com.example.domain.contracts
 
 import com.example.domain.Dto.CuotaDTO
 import com.example.domain.entities.Cuota
+import java.math.BigDecimal
 
 interface ICuotaRepository {
     fun save(cuota: Cuota)
@@ -19,6 +20,7 @@ interface ICuotaRepository {
     fun obtenerCuotasVencidasPorCobrador(cobradorId: Int, mes: Int?, anio: Int?,
                                          dni: String?, page: Int,
                                          pageSize: Int): List<CuotaDTO>
+    fun actualizarCuotasNoPagadas(tipoPeñaId: Int, nuevoMonto: BigDecimal)
 
 }
 

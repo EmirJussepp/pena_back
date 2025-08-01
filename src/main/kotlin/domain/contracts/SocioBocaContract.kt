@@ -7,7 +7,7 @@ import com.example.domain.entities.TiposSocioBoca
 interface ISocioBocaContract {
     fun save(tipoSocioBoca: TipoSocioBoca)
     fun findById(tipoSocioBocaId: Int) : TipoSocioBoca?
-    fun getMontoById(tipoSocioBocaId: Int): Int?
+
     fun obtenerTodos(): List<TipoSocioBoca>
     fun eliminar(tipoSocioBocaId: Int)
     fun actualizar(tipoSocioBoca: TipoSocioBoca)

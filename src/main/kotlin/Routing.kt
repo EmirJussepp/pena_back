@@ -3,7 +3,7 @@ package com.example
 import com.example.application.Service.CuotaService
 import com.example.application.commandhandler.CreateCuotaCommandHandler
 import com.example.application.commandhandler.Movimientos.MovimientoCommandHandler
-import com.example.application.commandhandler.Salones.SalonCommandHandler
+
 import com.example.application.commandhandler.pagos.CrearPagoCommandHandler
 import com.example.infraestructure.http.routes.*
 import com.example.infraestructure.persistence.*
@@ -55,7 +55,6 @@ fun Application.configureRouting() {
 
     val cuotaService = CuotaService(
         tipoSocioPeñaRepository = sociosPeñaRepository,
-        tipoSocioBocaRepository = tipoSocioBocaRepository,
         socioRepository= socioRepository,
         cuotaRepository = cuotaRepository,
         beneficioRepository = beneficioRepository

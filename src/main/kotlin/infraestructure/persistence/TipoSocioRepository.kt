@@ -23,12 +23,12 @@ class TipoSocioBocaRepository(private val database: Database) : ISocioBocaContra
                 // Insertar un nuevo tipo de socio boca
                 TiposSocioBoca.insert {
                     it[nombre] = tipoSocioBoca.nombre
-                    it[precio] = tipoSocioBoca.precio
+
                 }
             } else {
                 // Actualizar tipo de socio boca existente
                 TiposSocioBoca.update({ TiposSocioBoca.nombre eq tipoSocioBoca.nombre }) {
-                    it[precio] = tipoSocioBoca.precio
+
                 }
             }
         }
@@ -40,28 +40,21 @@ class TipoSocioBocaRepository(private val database: Database) : ISocioBocaContra
                 .map { row ->
                     TipoSocioBoca(
                         tipoSocioBocaId = row[TiposSocioBoca.tipoSocioBocaId],
-                        nombre = row[TiposSocioBoca.nombre],
-                        precio = row[TiposSocioBoca.precio]
+                        nombre = row[TiposSocioBoca.nombre]
                     )
                 }
                 .singleOrNull() // Retorna un solo tipo de Boca o null si no existe
         }
     }
 
-    override fun getMontoById(tipoSocioBocaId: Int): Int? {
-        return transaction {
-            TiposSocioBoca.select { TiposSocioBoca.tipoSocioBocaId eq tipoSocioBocaId }
-                .singleOrNull()?.get(TiposSocioBoca.precio)
-        }
-    }
+
 
     override fun obtenerTodos(): List<TipoSocioBoca> {
         return transaction(database) {
             TiposSocioBoca.selectAll().map {
                 TipoSocioBoca(
                     tipoSocioBocaId = it[TiposSocioBoca.tipoSocioBocaId],
-                    nombre = it[TiposSocioBoca.nombre],
-                    precio = it[TiposSocioBoca.precio]  // <- sin coma aquí
+                    nombre = it[TiposSocioBoca.nombre]
                 )
             }
         }
@@ -70,7 +63,7 @@ class TipoSocioBocaRepository(private val database: Database) : ISocioBocaContra
         transaction(database) {
             TiposSocioBoca.update({ TiposSocioBoca.tipoSocioBocaId eq tipoSocioBoca.tipoSocioBocaId!! }) {
                 it[nombre] = tipoSocioBoca.nombre
-                it[precio] = tipoSocioBoca.precio
+
             }
         }
     }

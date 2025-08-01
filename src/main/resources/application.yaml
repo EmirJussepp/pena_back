@@ -10,7 +10,7 @@ db:
 
         url: "jdbc:mysql://localhost:3306/pena_socios"
         user: "root"
-        password: "18122022"
+        password: "3564"
 
 
 

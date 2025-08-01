@@ -49,11 +49,7 @@ class CreateSocioHandler(
         if (tipoSocioPeñaRepository.findById(command.tipoSocioPeñaId) == null)
             throw IllegalArgumentException("El tipo de socio Peña con ID ${command.tipoSocioPeñaId} no existe")
 
-        if (tipoSocioBocaRepository.findById(command.tipoBocaId) == null)
-            throw IllegalArgumentException("El tipo de socio Boca con ID ${command.tipoBocaId} no existe")
 
-        if (userRepository.findById(command.userId) == null)
-            throw IllegalArgumentException("El usuario con ID ${command.userId} no existe")
 
         if (localidadRepository.findById(command.localidadId) == null)
             throw IllegalArgumentException("La localidad con ID ${command.localidadId} no existe")
@@ -73,7 +69,6 @@ class CreateSocioHandler(
             tipoBocaId = command.tipoBocaId,
             userId = command.userId,
             localidadId = command.localidadId,
-            estado = command.estado,
             direccion = command.direccion
         )
 

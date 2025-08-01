@@ -8,7 +8,6 @@ import kotlinx.serialization.Serializable
 object TiposSocioBoca : Table("tipo_socioboca") {
     val tipoSocioBocaId= integer("tipo_boca_id").autoIncrement() // ID autoincremental
     val nombre = varchar("nombre", 100)
-    val precio = integer("precio")
 
     override val primaryKey = PrimaryKey(tipoSocioBocaId)
 }
@@ -16,20 +15,18 @@ object TiposSocioBoca : Table("tipo_socioboca") {
 @Serializable
 data class TipoSocioBoca(
     val tipoSocioBocaId: Int? = null, // Puede ser nulo al crearse (autoincremental)
-    val nombre: String,
-    val precio: Int,
+    val nombre: String
 
 ) {
     companion object {
         fun create(
-            nombre: String,
-            precio: Int,
+            nombre: String
 
         ): TipoSocioBoca {
             return TipoSocioBoca(
                 tipoSocioBocaId = null, // La BD generará el ID
                 nombre = nombre,
-                precio = precio,
+
 
             )
         }

@@ -160,7 +160,9 @@ override fun save(socio: Socio): Socio {
                 val filtroLike = "%${filtro.lowercase()}%"
                 condiciones += (Socios.nombre.lowerCase() like filtroLike) or
                         (Socios.apellido.lowerCase() like filtroLike) or
-                        (Socios.dni.castTo<String>(TextColumnType()).lowerCase() like filtroLike)
+                        (Socios.dni.castTo<String>(TextColumnType()).lowerCase() like filtroLike) or
+                        (Socios.alias.lowerCase() like filtroLike) or
+                        (Socios.numSocioBoca.castTo<String>(TextColumnType()).lowerCase() like filtroLike)
             }
 
             // Filtro por estado si se especifica

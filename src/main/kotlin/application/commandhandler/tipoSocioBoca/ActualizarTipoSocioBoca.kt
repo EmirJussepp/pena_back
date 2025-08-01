@@ -12,8 +12,7 @@ class UpdateTipoSocioBocaHandler(
 
         val tipoSocioBoca = TipoSocioBoca(
             tipoSocioBocaId = command.tipoSocioBocaId,
-            nombre = command.nombre,
-            precio = command.precio
+            nombre = command.nombre
             // agregar otros campos si los tienes
         )
 

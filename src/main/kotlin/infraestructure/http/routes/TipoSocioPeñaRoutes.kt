@@ -17,7 +17,7 @@ fun Application.socioPeñaRoutes() {
     val database: Database = connectToMySql() ?: error("Error connecting to MySQL database")
     val sociosPeñaRepository = SociosPeñaRepository(database)
     val createSocioPeñaHandler = CreateSociosPeñaCommandHandler(sociosPeñaRepository)  // ✅ Usa el handler correcto
-
+    val actualizarPrecioHandler = ActualizarPrecioHandler(sociosPeñaRepository)
     routing {
         // Ruta para crear un nuevo socio de peña
         post("/sociospeña") {
@@ -59,9 +59,7 @@ fun Application.socioPeñaRoutes() {
                     precio = datos.precio
                 )
 
-                val handler = ActualizarPrecioHandler(sociosPeñaRepository)
-                handler.handle(command)
-
+                actualizarPrecioHandler.handle(command)  // Usar la instancia ya creada
                 call.respond(HttpStatusCode.OK, "Tipo de socio actualizado con éxito")
             } catch (e: IllegalArgumentException) {
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
