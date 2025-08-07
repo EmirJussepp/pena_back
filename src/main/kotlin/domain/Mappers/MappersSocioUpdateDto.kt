@@ -1,6 +1,6 @@
 package com.example.domain.Mappers
 
-import com.example.domain.Dto.SocioUpdateDTO
+import com.example.domain.dto.SocioUpdateDTO
 import com.example.domain.entities.Socio
 
 

@@ -3,8 +3,8 @@ package com.example.infraestructure.http.routes
 import com.example.application.command.pagos.CrearPagoCommand
 import com.example.application.commandhandler.pagos.CrearPagoCommandHandler
 import com.example.domain.contracts.IPagoRepository
-import com.example.domain.entities.Pago
-import com.example.infrastructure.repositories.CuotaRepository
+
+//import com.example.infrastructure.repositories.CuotaRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -13,7 +13,7 @@ import io.ktor.server.routing.*
 
 fun Application.pagoRoutes(
     pagoRepository: IPagoRepository,
-    cuotaRepository: CuotaRepository,
+//    cuotaRepository: CuotaRepository,
     crearPagoCommandHandler: CrearPagoCommandHandler
 ) {
     routing {

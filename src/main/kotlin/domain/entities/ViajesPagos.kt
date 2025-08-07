@@ -1,11 +1,10 @@
 package com.example.domain.entities
 
-import kotlinx.datetime.LocalDateTime
+
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.CurrentDateTime
-import org.jetbrains.exposed.sql.javatime.datetime
+
 import java.math.BigDecimal
 
 object ViajesPagos : Table("viajes_pagos") {
@@ -15,6 +14,7 @@ object ViajesPagos : Table("viajes_pagos") {
     val nombre = varchar("nombre", 255).nullable()
     val apellido = varchar("apellido", 250).nullable()
     val dni = varchar("dni", 255).nullable()
+    val cobradoresId= integer("cobrador_id").references(Cobradores.cobradoresId)
     val metodoPagoId = integer("metodo_pago_id").references(metodosPago.metodoPagoId)
 
     override val primaryKey = PrimaryKey(viajePagoId)
@@ -28,7 +28,8 @@ data class ViajePago(
     val nombre: String?,
     val apellido: String?,
     val dni: String?,
-    val metodoPagoId: Int
+    val metodoPagoId: Int,
+    val cobradoresId: Int
 ) {
     companion object {
         fun create(
@@ -37,7 +38,8 @@ data class ViajePago(
             nombre: String?,
             apellido: String?,
             dni: String?,
-            metodoPagoId: Int
+            metodoPagoId: Int,
+            cobradoresId: Int
         ): ViajePago {
             return ViajePago(
                 viajePagoId = null,
@@ -47,7 +49,8 @@ data class ViajePago(
                 nombre = nombre,
                 apellido = apellido,
                 dni = dni,
-                metodoPagoId = metodoPagoId
+                metodoPagoId = metodoPagoId,
+                cobradoresId= cobradoresId
             )
         }
     }

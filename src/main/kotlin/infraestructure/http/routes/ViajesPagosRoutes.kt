@@ -2,7 +2,7 @@ package com.example.infraestructure.http.routes
 import com.example.application.commandhandler.ViajesPagos.ViajePagoCommandHandler
 import com.example.application.command.ViajesPagos.CreateViajesPagosCommand
 import com.example.infraestructure.persistence.connectToMySql
-import com.example.infrastructure.persistence.ViajesPagosRepository
+import com.example.infraestructure.persistence.ViajesPagosRepository
 import io.ktor.server.application.*
 import io.ktor.http.*
 import io.ktor.server.request.*
@@ -59,6 +59,16 @@ fun Application.viajesPagosRoutes() {
             } catch (e: Exception) {
                 println("❌ Error al obtener pagos por viajeId: ${e.message}")
                 call.respond(HttpStatusCode.InternalServerError, "Error al obtener pagos")
+            }
+        }
+        // NUEVA RUTA: Listar todos los pagos con detalles completos (método pago + cobrador)
+        get("/viajePagosFull") {
+            try {
+                val pagosCompletos = viajesPagosRepository.findAllConCobradorYMetodo()
+                call.respond(pagosCompletos)
+            } catch (e: Exception) {
+                println("❌ Error al obtener pagos completos: ${e.message}")
+                call.respond(HttpStatusCode.InternalServerError, "Error al obtener pagos completos")
             }
         }
 

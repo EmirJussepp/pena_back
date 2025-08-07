@@ -6,7 +6,8 @@ class CreateCobradorCommand(
     val nombre: String,
     val telefono:String,
     val dni: String,
-    val zona: String
+    val zona: String,
+
 ) {
     fun validate(): CreateCobradorCommand {
         if (nombre.isBlank()) {

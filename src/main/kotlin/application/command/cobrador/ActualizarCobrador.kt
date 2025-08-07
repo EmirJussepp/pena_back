@@ -7,5 +7,6 @@ data class ActualizarCobrador(
     val nombre: String,
     val telefono: String,
     val dni: String,
-    val zona: String
+    val zona: String,
+
 )

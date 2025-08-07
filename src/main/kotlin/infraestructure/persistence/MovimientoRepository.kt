@@ -2,8 +2,7 @@ package com.example.infraestructure.persistence
 import com.example.domain.entities.Movimiento
 import com.example.domain.entities.Movimientos
 import com.example.domain.contracts.MovimientoContract
-import com.example.domain.entities.Cuotas
-import com.example.domain.entities.Socios
+
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -12,7 +11,7 @@ import kotlinx.datetime.toKotlinLocalDateTime
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import java.math.BigDecimal
 import java.time.LocalDate
-import java.time.LocalDateTime
+
 import java.time.YearMonth
 
 

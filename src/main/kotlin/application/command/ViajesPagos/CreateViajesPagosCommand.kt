@@ -1,5 +1,4 @@
 package com.example.application.command.ViajesPagos
-
 import kotlinx.serialization.Serializable
 
 
@@ -10,7 +9,8 @@ data class CreateViajesPagosCommand(
     val nombre: String?,
     val apellido: String?,
     val dni: String?,
-    val metodoPagoId: Int
+    val metodoPagoId: Int,
+    val cobradoresId: Int
 ) {
     fun validate() {
         if (!nombre.isNullOrBlank() || !apellido.isNullOrBlank() || !dni.isNullOrBlank()) {

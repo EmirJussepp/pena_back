@@ -6,9 +6,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 import com.example.domain.contracts.IViajesBombonera
-import com.example.domain.entities.Movimiento
-import com.example.domain.entities.Movimientos
-import kotlinx.datetime.toKotlinLocalDateTime
+
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.javatime.month

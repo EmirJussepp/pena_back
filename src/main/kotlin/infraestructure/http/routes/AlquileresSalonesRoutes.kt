@@ -82,14 +82,20 @@ fun Application.alquileresSalonesRoutes() {
 
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Alquiler actualizado correctamente"))
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("mensaje" to e.message))
             } catch (e: Exception) {
                 e.printStackTrace()
-                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error interno al actualizar alquiler"))
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Error interno al actualizar alquiler")
+                )
             }
+
+
         }
-
-
-
     }
+
+
+
 }
+

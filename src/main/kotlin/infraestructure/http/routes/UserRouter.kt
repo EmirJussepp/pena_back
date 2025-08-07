@@ -13,7 +13,7 @@ import com.example.domain.entities.LoginRequest
 import com.example.infraestructure.persistence.UserRepository
 import com.example.infraestructure.persistence.connectToMySql
 import org.jetbrains.exposed.sql.Database
-import org.mindrot.jbcrypt.BCrypt
+
 fun Application.userRoutes() {
     val database: Database = connectToMySql() ?: error("Error connecting to MySQL database")
     // Conectar a MySQL

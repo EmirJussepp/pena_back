@@ -1,6 +1,6 @@
 package com.example.domain.entities
 
-import com.example.domain.Dto.SocioDTO
+import com.example.domain.dto.SocioDTO
 import kotlinx.serialization.Serializable
 
 @Serializable

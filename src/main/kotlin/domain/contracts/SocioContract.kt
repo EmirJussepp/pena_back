@@ -1,8 +1,9 @@
 package com.example.domain.contracts
 
-import com.example.domain.Dto.CuotaDTO
+
 import com.example.domain.entities.Socio
 import com.example.domain.entities.SociosPage
+import java.math.BigDecimal
 
 
 interface ISocioRepository{
@@ -18,8 +19,9 @@ interface ISocioRepository{
     fun findByDni(dni: String): Socio?
    fun contarPorEstado(estado: Boolean): Int
 //    fun obtenerCuotasVencidasPorCobrador(cobradorId: Int): List<CuotaDTO>
-    suspend fun update(socio: Socio): Socio
-
+     fun update(socio: Socio): Socio
+    fun obtenerPrecioTipoPeña(tipoPeñaId: Int): BigDecimal?
+    fun actualizarCuotasPendientes(socioId: Int, nuevoMonto: BigDecimal)
 
 
 }

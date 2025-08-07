@@ -1,8 +1,7 @@
 package com.example.infraestructure.persistence
 
 import com.example.domain.contracts.IUserRepository
-import com.example.domain.entities.Cobrador
-import com.example.domain.entities.Cobradores
+
 import com.example.domain.entities.User
 import com.example.domain.entities.Users
 import org.jetbrains.exposed.sql.*

@@ -10,19 +10,19 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.example.application.commandhandler.Socios.CreateSocioHandler
 import com.example.application.command.Socios.CreateSocioCommand
+import com.example.application.commandhandler.Socios.actualizarSocioHandler
 import com.example.application.querys.ObtenerSocioIdQuery
-import com.example.application.querys.ObtenerSocioPorNombreQuery
-import com.example.application.querysHandler.GetSocioQueryHandler
+
 
 import com.example.application.querysHandler.ObtenerSocioIdHandler
-import com.example.application.querysHandler.ObtenerSocioNombreHandler
-import com.example.domain.Dto.SocioDTO
-import com.example.domain.Dto.SocioUpdateDTO
+//import com.example.application.querysHandler.ObtenerSocioNombreHandler
+import com.example.domain.dto.SocioDTO
+import com.example.domain.dto.SocioUpdateDTO
 
 import com.example.domain.Mappers.mapearUpdateDTOaEntidad
 import com.example.domain.entities.SociosPage
 import com.example.infraestructure.persistence.*
-import com.example.infrastructure.repositories.CuotaRepository
+//import com.example.infrastructure.repositories.CuotaRepository
 import org.jetbrains.exposed.sql.Database
 
 fun Application.socioRoutes() {
@@ -31,6 +31,8 @@ fun Application.socioRoutes() {
     lateinit var beneficioRepository: BeneficioRepository
 
     val socioRepository = SocioRepository(database) { beneficioRepository }
+    val actualizarSocioHandler = actualizarSocioHandler(socioRepository)
+
 
     beneficioRepository = BeneficioRepository(database, socioRepository)
 
@@ -63,7 +65,7 @@ fun Application.socioRoutes() {
 
     val obtenerSocioIdHandler = ObtenerSocioIdHandler(socioRepository) // 🔹 Aquí creamos la instancia
 
-    val obtenerSocioNombreHandler = ObtenerSocioNombreHandler(socioRepository)
+//    val obtenerSocioNombreHandler = ObtenerSocioNombreHandler(socioRepository)
 
     routing {
         post("/socios") {
@@ -92,8 +94,7 @@ fun Application.socioRoutes() {
                 }
             } catch (e: IllegalArgumentException) {
                 // Asegúrate de que e.message no sea null y responde con un mensaje de error adecuado
-                val errorMessage = e.message ?: "Argumento inválido"
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to errorMessage))
+                call.respond(HttpStatusCode.BadRequest, mapOf("mensaje" to e.message))
             } catch (e: Exception) {
                 // Captura cualquier otro error inesperado y responde con un error genérico
                 call.respond(
@@ -144,7 +145,7 @@ fun Application.socioRoutes() {
                 val search = call.request.queryParameters["search"]
 
                 // Calcular offset
-                val offset = ((page - 1) * size).toInt()
+                val offset = ((page - 1) * size)
 
                 // Obtener resultado paginado y filtrado desde el repositorio
                 val resultado = socioRepository.obtenerPaginadoYFiltrado(size, offset, search, estado = true)
@@ -217,14 +218,40 @@ fun Application.socioRoutes() {
             }
         }
 
+//        patch("/socios/{socio_id}") {
+//            try {
+//                val id = call.parameters["socio_id"]?.toIntOrNull()
+//                    ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
+//
+//                val dto = call.receive<SocioUpdateDTO>()
+//                println("DTO recibido: $dto")
+//
+//
+//                if (dto.socioId != id) {
+//                    return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "El ID no coincide"))
+//                }
+//
+//                val socioExistente = socioRepository.findById(dto.socioId)
+//                    ?: return@patch call.respond(HttpStatusCode.NotFound, mapOf("error" to "Socio no encontrado"))
+//
+//                val socioActualizado = mapearUpdateDTOaEntidad(dto, socioExistente)
+//                println("Entidad para actualizar: $socioActualizado")
+//
+//                val socioGuardado = socioRepository.update(socioActualizado)
+//                println("Entidad guardada: $socioGuardado")
+//
+//                call.respond(HttpStatusCode.OK, socioGuardado)
+//            } catch (e: Exception) {
+//                e.printStackTrace()  // imprime detalle del error en consola
+//                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al actualizar socio"))
+//            }
+//        }
         patch("/socios/{socio_id}") {
             try {
                 val id = call.parameters["socio_id"]?.toIntOrNull()
                     ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
 
                 val dto = call.receive<SocioUpdateDTO>()
-                println("DTO recibido: $dto")
-
 
                 if (dto.socioId != id) {
                     return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "El ID no coincide"))
@@ -233,18 +260,17 @@ fun Application.socioRoutes() {
                 val socioExistente = socioRepository.findById(dto.socioId)
                     ?: return@patch call.respond(HttpStatusCode.NotFound, mapOf("error" to "Socio no encontrado"))
 
-                val socioActualizado = mapearUpdateDTOaEntidad(dto, socioExistente)
-                println("Entidad para actualizar: $socioActualizado")
+                val socioParaActualizar = mapearUpdateDTOaEntidad(dto, socioExistente)
 
-                val socioGuardado = socioRepository.update(socioActualizado)
-                println("Entidad guardada: $socioGuardado")
+                val socioActualizado = actualizarSocioHandler.actualizarSocio(socioParaActualizar)
 
-                call.respond(HttpStatusCode.OK, socioGuardado)
+                call.respond(HttpStatusCode.OK, socioActualizado)
             } catch (e: Exception) {
-                e.printStackTrace()  // imprime detalle del error en consola
+                e.printStackTrace()
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al actualizar socio"))
             }
         }
+
         patch("/socios/{id}/baja") {
             val idParam = call.parameters["id"]
             val socioId = idParam?.toIntOrNull()

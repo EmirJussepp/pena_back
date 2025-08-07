@@ -1,6 +1,6 @@
 package com.example.domain.Mappers
 
-import com.example.domain.Dto.SocioDTO
+import com.example.domain.dto.SocioDTO
 import com.example.domain.contracts.ICobradorRepository
 import com.example.domain.contracts.ILocalidadRepository
 import com.example.domain.contracts.ISocioBocaContract

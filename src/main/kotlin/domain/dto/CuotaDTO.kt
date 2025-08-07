@@ -1,4 +1,4 @@
-package com.example.domain.Dto
+package com.example.domain.dto
 
 
 import kotlinx.serialization.Serializable

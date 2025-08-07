@@ -1,7 +1,7 @@
 package com.example.infraestructure.persistence
 
-import com.example.domain.Dto.BeneficioConSocioDTO
-import com.example.domain.Dto.PaginadoBeneficiosResponse
+import com.example.domain.dto.BeneficioConSocioDTO
+import com.example.domain.dto.PaginadoBeneficiosResponse
 import com.example.domain.contracts.IBeneficioRepository
 import com.example.domain.entities.Beneficios
 import com.example.domain.entities.Cuotas

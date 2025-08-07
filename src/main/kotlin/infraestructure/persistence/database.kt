@@ -36,31 +36,3 @@ fun Application.connectToMySql(): Database? {
 
 
 
-//object Users : Table() { // Solo para verificar la conexión
-//    val id = integer("id").autoIncrement()
-//    val name = varchar("name", 50)
-//    override val primaryKey = PrimaryKey(id)
-//}
-//
-//fun Application.configureDatabase() {
-//    val log = LoggerFactory.getLogger("Database")
-//
-//    val config = environment.config
-//    val url = config.propertyOrNull("db.mysql.url")?.getString() ?: error("Database URL not found")
-//    val user = config.propertyOrNull("db.mysql.user")?.getString() ?: error("Database User not found")
-//    val password = config.propertyOrNull("db.mysql.password")?.getString() ?: error("Database Password not found")
-//    val driver = config.propertyOrNull("db.mysql.driver")?.getString() ?: "com.mysql.cj.jdbc.Driver"
-//
-//    try {
-//        Database.connect(url, driver, user, password)
-//        log.info("✅ Conexión a la base de datos establecida correctamente")
-//
-//        transaction {
-//            SchemaUtils.createMissingTablesAndColumns(Users) // Crea la tabla si no existe
-//            val usersCount = Users.selectAll().count()
-//            log.info("📊 Usuarios en la base de datos: $usersCount")
-//        }
-//    } catch (e: Exception) {
-//        log.error("❌ Error al conectar con la base de datos: ${e.message}")
-//    }
-//}

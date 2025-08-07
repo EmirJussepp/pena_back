@@ -1,13 +1,13 @@
-package com.example.infrastructure.repositories
+package com.example.infraestructure.persistence
 
-import com.example.domain.Dto.CuotaDTO
+import com.example.domain.dto.CuotaDTO
 import com.example.domain.contracts.ICuotaRepository
 import com.example.domain.entities.Beneficios
 
 import com.example.domain.entities.Cuota
 import com.example.domain.entities.Cuotas
 import com.example.domain.entities.Socios
-import com.example.infraestructure.persistence.BeneficioRepository
+//import com.example.infraestructure.persistence.BeneficioRepository
 import kotlinx.datetime.*
 
 import java.time.LocalDateTime

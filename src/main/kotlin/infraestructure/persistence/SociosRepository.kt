@@ -2,7 +2,8 @@ package com.example.infraestructure.persistence
 
 
 
-import com.example.domain.Dto.SocioDTO
+import com.example.domain.dto.SocioDTO
+
 import com.example.domain.contracts.ISocioRepository
 import com.example.domain.entities.*
 import kotlinx.datetime.toKotlinLocalDateTime
@@ -10,6 +11,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.math.BigDecimal
 import java.time.LocalDateTime
 
 class SocioRepository(
@@ -271,7 +273,7 @@ fun darDeBajaPorId(socioId: Int): Boolean {
     }
 
 
-    override suspend fun update(socio: Socio): Socio {
+    override  fun update(socio: Socio): Socio {
         return transaction(database) {
             Socios.update({ Socios.socioId eq socio.socioId!! }) {
                 it[nombre] = socio.nombre
@@ -281,7 +283,7 @@ fun darDeBajaPorId(socioId: Int): Boolean {
                 it[dni] = socio.dni
                 it[numSocioBoca] = socio.numSocioBoca
                 it[telefono] = socio.telefono
-                it[fechaInicio] = LocalDateTime.now()
+//                it[fechaInicio] = LocalDateTime.now()
                 it[cobradorId] = socio.cobradorId
                 it[tipoSocioPeñaId] = socio.tipoSocioPeñaId
                 it[tipoBocaId] = socio.tipoBocaId
@@ -295,7 +297,68 @@ fun darDeBajaPorId(socioId: Int): Boolean {
         }
     }
 
+//override  fun update(socio: Socio): Socio {
+//    return transaction(database) {
+//        val socioActual = Socios.select { Socios.socioId eq socio.socioId!! }.singleOrNull()
+//            ?: throw IllegalArgumentException("Socio no encontrado")
+//
+//        val tipoAnterior = socioActual[Socios.tipoSocioPeñaId]
+//        val tipoNuevo = socio.tipoSocioPeñaId
+//
+//        // Si cambió la clasificación del socio
+//        if (tipoAnterior != tipoNuevo) {
+//
+//            val nuevoMonto = TiposSocioPeña.select { TiposSocioPeña.tipoSocioPeñaId eq tipoNuevo }
+//                .singleOrNull()?.get(TiposSocioPeña.precio)
+//                ?: throw IllegalArgumentException("Tipo de socio Peña no encontrado")
+//
+//            // Actualizar las cuotas NO pagadas del socio con el nuevo monto
+//            Cuotas.update({
+//                (Cuotas.socioId eq socio.socioId!!) and (Cuotas.estado eq false)
+//            }) {
+//                it[monto] = nuevoMonto.toBigDecimal()
+//            }
+//        }
+//
+//        // Actualizar los datos del socio
+//        Socios.update({ Socios.socioId eq socio.socioId!! }) {
+//            it[nombre] = socio.nombre
+//            it[alias] = socio.alias
+//            it[apellido] = socio.apellido
+//            it[email] = socio.email
+//            it[dni] = socio.dni
+//            it[numSocioBoca] = socio.numSocioBoca
+//            it[telefono] = socio.telefono
+//            it[cobradorId] = socio.cobradorId
+//            it[tipoSocioPeñaId] = socio.tipoSocioPeñaId
+//            it[tipoBocaId] = socio.tipoBocaId
+//            it[userId] = socio.userId
+//            it[localidadId] = socio.localidadId
+//            it[estado] = socio.estado
+//            it[direccion] = socio.direccion
+//            // ✳️ Importante: No toques fechaInicio si ya existe
+//        }
+//
+//        socio // Devuelve el socio actualizado
+//    }
+//}
+//
+override fun obtenerPrecioTipoPeña(tipoPeñaId: Int): BigDecimal? {
+    return transaction(database) {
+        TiposSocioPeña.select { TiposSocioPeña.tipoSocioPeñaId eq tipoPeñaId }
+            .singleOrNull()?.get(TiposSocioPeña.precio)?.toBigDecimal()
+    }
+}
 
+    override fun actualizarCuotasPendientes(socioId: Int, nuevoMonto: BigDecimal) {
+        transaction(database) {
+            Cuotas.update({
+                (Cuotas.socioId eq socioId) and (Cuotas.estado eq false)
+            }) {
+                it[monto] = nuevoMonto
+            }
+        }
+    }
 
     fun eliminarPorId(socioId: Int): Boolean {
         return transaction(database) {
@@ -335,27 +398,27 @@ fun darDeBajaPorId(socioId: Int): Boolean {
                 .singleOrNull()
         }
     }
-    private fun mapRowToSocio(row: ResultRow): Socio {
-        return Socio(
-            socioId = row[Socios.socioId],
-            nombre = row[Socios.nombre],
-            apellido = row[Socios.apellido],
-            alias = row[Socios.alias],
-            dni = row[Socios.dni],
-            numSocioBoca = row[Socios.numSocioBoca],
-            email = row[Socios.email],
-            telefono = row[Socios.telefono],
-            fechaInicio = row[Socios.fechaInicio].toKotlinLocalDateTime(),
-            cobradorId = row[Socios.cobradorId],
-            tipoSocioPeñaId = row[Socios.tipoSocioPeñaId],
-            tipoBocaId = row[Socios.tipoBocaId],
-            userId = row[Socios.userId],
-            localidadId = row[Socios.localidadId],
-            estado = row[Socios.estado],
-            fechaDeBaja = row[Socios.fechaDeBaja]?.toKotlinLocalDateTime(),
-            direccion = row[Socios.direccion]
-        )
-    }
+//    private fun mapRowToSocio(row: ResultRow): Socio {
+//        return Socio(
+//            socioId = row[Socios.socioId],
+//            nombre = row[Socios.nombre],
+//            apellido = row[Socios.apellido],
+//            alias = row[Socios.alias],
+//            dni = row[Socios.dni],
+//            numSocioBoca = row[Socios.numSocioBoca],
+//            email = row[Socios.email],
+//            telefono = row[Socios.telefono],
+//            fechaInicio = row[Socios.fechaInicio].toKotlinLocalDateTime(),
+//            cobradorId = row[Socios.cobradorId],
+//            tipoSocioPeñaId = row[Socios.tipoSocioPeñaId],
+//            tipoBocaId = row[Socios.tipoBocaId],
+//            userId = row[Socios.userId],
+//            localidadId = row[Socios.localidadId],
+//            estado = row[Socios.estado],
+//            fechaDeBaja = row[Socios.fechaDeBaja]?.toKotlinLocalDateTime(),
+//            direccion = row[Socios.direccion]
+//        )
+//    }
 
     private fun mapRowToSocioDTO(row: ResultRow): SocioDTO {
         return SocioDTO(
@@ -371,10 +434,10 @@ fun darDeBajaPorId(socioId: Int): Boolean {
             fechaInicio = row[Socios.fechaInicio].toKotlinLocalDateTime(),
             direccion = row[Socios.direccion],
             fechaDeBaja = row[Socios.fechaDeBaja]?.toKotlinLocalDateTime(),
-            cobradorNombre = row[Cobradores.nombre] ?: "—",
-            tipoPeñaNombre = row[TiposSocioPeña.nombre] ?: "—",
-            tipoBocaNombre = row[TiposSocioBoca.nombre] ?: "—",
-            localidadNombre = row[Localidades.nombre] ?: "—"
+            cobradorNombre = row[Cobradores.nombre],
+            tipoPeñaNombre = row[TiposSocioPeña.nombre],
+            tipoBocaNombre = row[TiposSocioBoca.nombre],
+            localidadNombre = row[Localidades.nombre]
         )
     }
 
@@ -390,26 +453,26 @@ fun darDeBajaPorId(socioId: Int): Boolean {
     override fun existsByEmail(email: String): Boolean =
         transaction { Socios.select { Socios.email eq email }.count() > 0 }
 
-    fun contarCuotasPagadas(socioId: Int): Int = transaction(database) {
-        Cuotas.select { (Cuotas.socioId eq socioId) and (Cuotas.estado eq true) }.count().toInt()
-    }
-    fun tieneDeuda(socioId: Int): Boolean = transaction(database) {
-        val ahora = LocalDateTime.now()
-        Cuotas.select {
-            (Cuotas.socioId eq socioId) and
-                    (Cuotas.estado eq false) and
-                    (Cuotas.fechaVencimiento less ahora)
-        }.count() > 0
-    }
-    fun tieneDeudade2Cuotas(socioId: Int): Boolean = transaction(database) {
-        val ahora = LocalDateTime.now()
-        Cuotas.select {
-            (Cuotas.socioId eq socioId) and
-                    (Cuotas.estado eq false) and
-                    (Cuotas.fechaVencimiento less ahora)
-        }.count() > 2 // Cambié de >0 a >2
-    }
-
+//    fun contarCuotasPagadas(socioId: Int): Int = transaction(database) {
+//        Cuotas.select { (Cuotas.socioId eq socioId) and (Cuotas.estado eq true) }.count().toInt()
+//    }
+//    fun tieneDeuda(socioId: Int): Boolean = transaction(database) {
+//        val ahora = LocalDateTime.now()
+//        Cuotas.select {
+//            (Cuotas.socioId eq socioId) and
+//                    (Cuotas.estado eq false) and
+//                    (Cuotas.fechaVencimiento less ahora)
+//        }.count() > 0
+//    }
+//    fun tieneDeudade2Cuotas(socioId: Int): Boolean = transaction(database) {
+//        val ahora = LocalDateTime.now()
+//        Cuotas.select {
+//            (Cuotas.socioId eq socioId) and
+//                    (Cuotas.estado eq false) and
+//                    (Cuotas.fechaVencimiento less ahora)
+//        }.count() > 2 // Cambié de >0 a >2
+//    }
+//
 
 }
 

@@ -1,11 +1,10 @@
 package com.example.infraestructure.persistence
 
 import com.example.domain.contracts.ISalonesRepository
-import com.example.domain.entities.Pago
-import com.example.domain.entities.Pagos
+
 import com.example.domain.entities.Salon
 import com.example.domain.entities.Salones
-import kotlinx.datetime.toKotlinLocalDateTime
+
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction

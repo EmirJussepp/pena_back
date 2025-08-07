@@ -2,7 +2,7 @@ package com.example.application.querysHandler
 
 
 
-import com.example.domain.Dto.SocioDTO
+import com.example.domain.dto.SocioDTO
 import com.example.domain.entities.Socio
 import com.example.domain.contracts.ISocioRepository
 import com.example.domain.contracts.ICobradorRepository

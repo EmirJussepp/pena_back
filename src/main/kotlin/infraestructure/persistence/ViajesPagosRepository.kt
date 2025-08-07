@@ -1,11 +1,15 @@
-package com.example.infrastructure.persistence
+package com.example.infraestructure.persistence
 
+
+import com.example.domain.dto.ViajePagoFullDTO
 import com.example.domain.contracts.IViajesPagosContract
-import com.example.domain.entities.ViajeBombonera
+import com.example.domain.entities.Cobradores
+
 import com.example.domain.entities.ViajePago
 
 import com.example.domain.entities.ViajesPagos
-import kotlinx.datetime.toKotlinLocalDateTime
+import com.example.domain.entities.metodosPago
+
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -20,6 +24,7 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
                 it[apellido] = viajePago.apellido
                 it[dni] = viajePago.dni
                 it[metodoPagoId] = viajePago.metodoPagoId
+                it[cobradoresId] = viajePago.cobradoresId
             }get ViajesPagos.viajeId
 
             val row = ViajesPagos.select { ViajesPagos.viajePagoId eq insertedId }.single()
@@ -31,7 +36,8 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
                 nombre = row[ViajesPagos.nombre],
                 apellido = row[ViajesPagos.apellido],
                 dni = row[ViajesPagos.dni],
-                metodoPagoId = row[ViajesPagos.metodoPagoId]
+                metodoPagoId = row[ViajesPagos.metodoPagoId],
+                cobradoresId = row[ViajesPagos.cobradoresId]
             )
         }
     }
@@ -47,7 +53,8 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
                         nombre = row[ViajesPagos.nombre],
                         apellido = row[ViajesPagos.apellido],
                         dni = row[ViajesPagos.dni],
-                        metodoPagoId = row[ViajesPagos.metodoPagoId]
+                        metodoPagoId = row[ViajesPagos.metodoPagoId],
+                        cobradoresId = row[ViajesPagos.cobradoresId]
                     )
                 }
         }
@@ -64,7 +71,29 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
                         nombre = row[ViajesPagos.nombre],
                         apellido = row[ViajesPagos.apellido],
                         dni = row[ViajesPagos.dni],
-                        metodoPagoId = row[ViajesPagos.metodoPagoId]
+                        metodoPagoId = row[ViajesPagos.metodoPagoId],
+                        cobradoresId = row[ViajesPagos.cobradoresId]
+                    )
+                }
+        }
+    }
+    fun findAllConCobradorYMetodo(): List<ViajePagoFullDTO> {
+        return transaction(database) {
+            (ViajesPagos innerJoin Cobradores innerJoin metodosPago)
+                .selectAll()
+                .map { row ->
+                    ViajePagoFullDTO(
+                        viajePagoId = row[ViajesPagos.viajePagoId],
+                        viajeId = row[ViajesPagos.viajeId],
+                        monto = row[ViajesPagos.monto].toDouble(),
+                        nombre = row[ViajesPagos.nombre]!!,
+                        apellido = row[ViajesPagos.apellido]!!,
+                        dni = row[ViajesPagos.dni]!!,
+                        metodoPagoId = row[ViajesPagos.metodoPagoId],
+                        metodoPagoNombre = row[metodosPago.nombre],
+                        cobradoresId = row[ViajesPagos.cobradoresId],
+                        cobradorNombre = row[Cobradores.nombre]
+//                        cobradorApellido = row[Cobradores.apellido]
                     )
                 }
         }

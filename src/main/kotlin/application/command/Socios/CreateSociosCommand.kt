@@ -24,7 +24,6 @@ data class CreateSocioCommand(
     fun validate(): List<String> {
         val errors = mutableListOf<String>()
 
-        println("\uD83D\uDCC3 Recibiendo datos: $this")  // Depuración
 
         // Validaciones de campos obligatorios
         if (nombre.isBlank()) errors.add("El nombre es obligatorio")

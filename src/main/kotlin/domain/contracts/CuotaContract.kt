@@ -2,7 +2,7 @@ package com.example.domain.contracts
 
 
 
-import com.example.domain.Dto.CuotaDTO
+import com.example.domain.dto.CuotaDTO
 import com.example.domain.entities.Cuota
 import java.math.BigDecimal
 

@@ -8,8 +8,8 @@ import com.example.application.commandhandler.pagos.CrearPagoCommandHandler
 import com.example.infraestructure.http.routes.*
 import com.example.infraestructure.persistence.*
 
-import com.example.infrastructure.persistence.ViajesPagosRepository
-import com.example.infrastructure.repositories.CuotaRepository
+
+
 import com.example.routes.cuotaRoutes
 import io.ktor.http.*
 
@@ -40,12 +40,12 @@ fun Application.configureRouting() {
 
 // Luego continuás con el resto
     val pagoRepository = PagoRepository(database)
-    val userRepository = UserRepository(database)
-    val viajePagoRepository = ViajesPagosRepository(database)
-    val viajeRepository = ViajeBomboneraRepository(database)
+//    val userRepository = UserRepository(database)
+//    val viajePagoRepository = ViajesPagosRepository(database)
+//    val viajeRepository = ViajeBomboneraRepository(database)
     val movimientoRepository = MovimientoRepository(database)
-    val sociosPeñaRepository = SociosPeñaRepository(database)
-    val tipoSocioBocaRepository = TipoSocioBocaRepository(database)
+    val sociosPenaRepository = SociosPeñaRepository(database)
+//    val tipoSocioBocaRepository = TipoSocioBocaRepository(database)
 
     val cuotaRepository = CuotaRepository(
         database = database,
@@ -54,7 +54,7 @@ fun Application.configureRouting() {
 
 
     val cuotaService = CuotaService(
-        tipoSocioPeñaRepository = sociosPeñaRepository,
+        tipoSocioPeñaRepository = sociosPenaRepository,
         socioRepository= socioRepository,
         cuotaRepository = cuotaRepository,
         beneficioRepository = beneficioRepository
@@ -124,7 +124,7 @@ fun Application.configureRouting() {
 
         pagoRoutes(
             pagoRepository = pagoRepository,
-            cuotaRepository = cuotaRepository,
+//            cuotaRepository = cuotaRepository,
             crearPagoCommandHandler = crearPagoCommandHandler
         )
     }

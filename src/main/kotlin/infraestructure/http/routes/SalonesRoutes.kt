@@ -2,10 +2,10 @@ package com.example.infraestructure.http.routes
 
 import com.example.application.command.Salones.ActualzarSalones
 import com.example.application.command.Salones.CreateSalonCommand
-import com.example.application.command.cobrador.ActualizarCobrador
+
 import com.example.application.commandhandler.Salones.ActualizarSalonesHandler
 import com.example.application.commandhandler.Salones.SalonCommandHandler
-import com.example.application.commandhandler.cobrador.ActualizarCobradoresHandler
+
 import com.example.infraestructure.persistence.SalonesRepository
 import com.example.infraestructure.persistence.connectToMySql
 import io.ktor.http.*
