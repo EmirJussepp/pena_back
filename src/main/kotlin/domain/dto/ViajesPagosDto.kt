@@ -12,7 +12,7 @@ data class ViajePagoFullDTO(
     val dni: String,
     val metodoPagoId: Int,
     val metodoPagoNombre: String,
-    val cobradoresId: Int,
+    val cobradorId: Int,
     val cobradorNombre: String,
 //    val cobradorApellido: String
 )

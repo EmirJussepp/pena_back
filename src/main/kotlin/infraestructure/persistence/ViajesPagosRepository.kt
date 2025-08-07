@@ -3,14 +3,10 @@ package com.example.infraestructure.persistence
 
 import com.example.domain.dto.ViajePagoFullDTO
 import com.example.domain.contracts.IViajesPagosContract
-import com.example.domain.entities.Cobradores
-
-import com.example.domain.entities.ViajePago
-
-import com.example.domain.entities.ViajesPagos
-import com.example.domain.entities.metodosPago
+import com.example.domain.entities.*
 
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class ViajesPagosRepository(private val database: Database) : IViajesPagosContract {
@@ -24,10 +20,11 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
                 it[apellido] = viajePago.apellido
                 it[dni] = viajePago.dni
                 it[metodoPagoId] = viajePago.metodoPagoId
-                it[cobradoresId] = viajePago.cobradoresId
-            }get ViajesPagos.viajeId
+                it[cobradorId] = viajePago.cobradorId
+            }get ViajesPagos.viajePagoId
+            val row = ViajesPagos.select { ViajesPagos.viajePagoId eq insertedId }.singleOrNull()
+                ?: error("❌ No se encontró el viaje pago con ID $insertedId luego de insertarlo")
 
-            val row = ViajesPagos.select { ViajesPagos.viajePagoId eq insertedId }.single()
 
             ViajePago(
                 viajePagoId = row[ViajesPagos.viajePagoId],
@@ -37,7 +34,7 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
                 apellido = row[ViajesPagos.apellido],
                 dni = row[ViajesPagos.dni],
                 metodoPagoId = row[ViajesPagos.metodoPagoId],
-                cobradoresId = row[ViajesPagos.cobradoresId]
+                cobradorId = row[ViajesPagos.cobradorId]
             )
         }
     }
@@ -54,7 +51,7 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
                         apellido = row[ViajesPagos.apellido],
                         dni = row[ViajesPagos.dni],
                         metodoPagoId = row[ViajesPagos.metodoPagoId],
-                        cobradoresId = row[ViajesPagos.cobradoresId]
+                        cobradorId = row[ViajesPagos.cobradorId]
                     )
                 }
         }
@@ -72,7 +69,7 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
                         apellido = row[ViajesPagos.apellido],
                         dni = row[ViajesPagos.dni],
                         metodoPagoId = row[ViajesPagos.metodoPagoId],
-                        cobradoresId = row[ViajesPagos.cobradoresId]
+                        cobradorId = row[ViajesPagos.cobradorId]
                     )
                 }
         }
@@ -91,11 +88,17 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
                         dni = row[ViajesPagos.dni]!!,
                         metodoPagoId = row[ViajesPagos.metodoPagoId],
                         metodoPagoNombre = row[metodosPago.nombre],
-                        cobradoresId = row[ViajesPagos.cobradoresId],
+                        cobradorId = row[ViajesPagos.cobradorId],
                         cobradorNombre = row[Cobradores.nombre]
 //                        cobradorApellido = row[Cobradores.apellido]
                     )
                 }
+        }
+    }
+    override suspend fun eliminarPorId(viajePagoId: Int): Boolean {
+        return transaction(database) {
+            val deletedCount = ViajesPagos.deleteWhere { ViajesPagos.viajePagoId eq viajePagoId }
+            deletedCount > 0
         }
     }
 

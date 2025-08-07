@@ -27,7 +27,7 @@ class ViajePagoCommandHandler(private val viajePagoRepository: IViajesPagosContr
             dni = command.dni,
 
             metodoPagoId = command.metodoPagoId,
-            cobradoresId = command.cobradoresId
+            cobradorId = command.cobradorId
         )
 
         // Guardar en el repositorio

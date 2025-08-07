@@ -71,6 +71,17 @@ fun Application.viajesPagosRoutes() {
                 call.respond(HttpStatusCode.InternalServerError, "Error al obtener pagos completos")
             }
         }
+        delete("/viajePagos/{id}") {
+            val id = call.parameters["id"]?.toIntOrNull()
+                ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID Invalido"))
+
+            val eliminado = viajesPagosRepository.eliminarPorId(id)
+            if (eliminado) {
+                call.respond(HttpStatusCode.OK, mapOf("message" to "Pasajero eliminado"))
+            } else {
+                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Pasajero no encontrado"))
+            }
+        }
 
     }
 }

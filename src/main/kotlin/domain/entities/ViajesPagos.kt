@@ -14,7 +14,7 @@ object ViajesPagos : Table("viajes_pagos") {
     val nombre = varchar("nombre", 255).nullable()
     val apellido = varchar("apellido", 250).nullable()
     val dni = varchar("dni", 255).nullable()
-    val cobradoresId= integer("cobrador_id").references(Cobradores.cobradoresId)
+    val cobradorId= integer("cobrador_id").references(Cobradores.cobradoresId)
     val metodoPagoId = integer("metodo_pago_id").references(metodosPago.metodoPagoId)
 
     override val primaryKey = PrimaryKey(viajePagoId)
@@ -29,7 +29,7 @@ data class ViajePago(
     val apellido: String?,
     val dni: String?,
     val metodoPagoId: Int,
-    val cobradoresId: Int
+    val cobradorId: Int
 ) {
     companion object {
         fun create(
@@ -39,7 +39,7 @@ data class ViajePago(
             apellido: String?,
             dni: String?,
             metodoPagoId: Int,
-            cobradoresId: Int
+            cobradorId: Int
         ): ViajePago {
             return ViajePago(
                 viajePagoId = null,
@@ -50,7 +50,7 @@ data class ViajePago(
                 apellido = apellido,
                 dni = dni,
                 metodoPagoId = metodoPagoId,
-                cobradoresId= cobradoresId
+                cobradorId= cobradorId
             )
         }
     }

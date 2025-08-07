@@ -10,7 +10,7 @@ data class CreateViajesPagosCommand(
     val apellido: String?,
     val dni: String?,
     val metodoPagoId: Int,
-    val cobradoresId: Int
+    val cobradorId: Int
 ) {
     fun validate() {
         if (!nombre.isNullOrBlank() || !apellido.isNullOrBlank() || !dni.isNullOrBlank()) {
