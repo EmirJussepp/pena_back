@@ -4,6 +4,7 @@ package com.example.infraestructure.persistence
 import com.example.domain.dto.ViajePagoFullDTO
 import com.example.domain.contracts.IViajesPagosContract
 import com.example.domain.entities.*
+import kotlinx.datetime.toJavaLocalDateTime
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -99,6 +100,20 @@ class ViajesPagosRepository(private val database: Database) : IViajesPagosContra
         return transaction(database) {
             val deletedCount = ViajesPagos.deleteWhere { ViajesPagos.viajePagoId eq viajePagoId }
             deletedCount > 0
+        }
+    }
+    override  fun update(viajePago: ViajePago): ViajePago {
+        return transaction(database) {
+            ViajesPagos.update({ ViajesPagos.viajePagoId eq viajePago.viajePagoId!! }) {
+                it[monto] = viajePago.monto
+                it[nombre] = viajePago.nombre
+                it[apellido] = viajePago.apellido
+                it[dni] = viajePago.dni
+                it[metodoPagoId] = viajePago.metodoPagoId
+                it[cobradorId] = viajePago.cobradorId
+                // No actualizamos viajeId ni viajePagoId
+            }
+            viajePago
         }
     }
 

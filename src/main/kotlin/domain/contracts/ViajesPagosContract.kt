@@ -7,4 +7,5 @@ interface IViajesPagosContract{
     fun findByViajeId(viajeId: Int): List<ViajePago>
     fun findAll(): List<ViajePago>
     suspend fun eliminarPorId(viajePagoId: Int): Boolean
+    fun update(viajePago: ViajePago): ViajePago
 }

@@ -1,6 +1,8 @@
 package com.example.infraestructure.http.routes
 import com.example.application.commandhandler.ViajesPagos.ViajePagoCommandHandler
 import com.example.application.command.ViajesPagos.CreateViajesPagosCommand
+import com.example.application.commandhandler.ViajesPagos.ActualizarViajePagoHandler
+import com.example.domain.entities.ViajePago
 import com.example.infraestructure.persistence.connectToMySql
 import com.example.infraestructure.persistence.ViajesPagosRepository
 import io.ktor.server.application.*
@@ -14,10 +16,11 @@ fun Application.viajesPagosRoutes() {
     val database: Database = connectToMySql() ?: error("Error connecting to MySQL database")
     val viajesPagosRepository = ViajesPagosRepository(database)
     val viajesPagosHandler = ViajePagoCommandHandler(viajesPagosRepository)
+    val actualizarViajePagoHandler = ActualizarViajePagoHandler(viajesPagosRepository)
 
 
     routing {
-        // Ruta para crear o actualizar un pago de viaje
+        
         post("/viajesPagos") {
             try {
                 val command = call.receive<CreateViajesPagosCommand>()
@@ -82,6 +85,27 @@ fun Application.viajesPagosRoutes() {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "Pasajero no encontrado"))
             }
         }
+
+        patch("/viajepagos/{id}") {
+            try {
+                val id = call.parameters["id"]?.toIntOrNull()
+                    ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
+
+                val viajePagoData = call.receive<ViajePago>()
+                if (viajePagoData.viajePagoId != id) {
+                    return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID no coincide"))
+                }
+
+                val actualizado = actualizarViajePagoHandler.actualizarViajePago(viajePagoData)
+                call.respond(HttpStatusCode.OK, actualizado)
+
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al actualizar ViajePago"))
+            }
+        }
+
 
     }
 }
