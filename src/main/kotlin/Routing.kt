@@ -113,6 +113,7 @@ fun Application.configureRouting() {
         alquileresSalonesRoutes()
         salonesRoutes()
         beneficiosRoutes()
+        authRoutes()
 
         // Cuotas y Pagos
         cuotaRoutes(

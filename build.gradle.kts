@@ -63,6 +63,10 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.2.4")  // Verifica la versión más reciente
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     implementation("org.mindrot:jbcrypt:0.4")
+    implementation("at.favre.lib:bcrypt:0.10.2")
+    implementation("io.ktor:ktor-server-auth:2.3.12")
+    implementation("io.ktor:ktor-server-auth-jwt:2.3.12")
+    implementation("com.auth0:java-jwt:4.4.0")
 
 
 }

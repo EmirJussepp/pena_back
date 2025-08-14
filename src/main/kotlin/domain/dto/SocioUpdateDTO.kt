@@ -14,7 +14,7 @@ data class SocioUpdateDTO(
     val numSocioBoca: Int?,
     val telefono: String?,
     val cobradorId: Int,
-    val tipoPeñaId: Int,
+    val tipoPenaId: Int,
     val tipoBocaId: Int?,
     val userId: Int?,
     val localidadId: Int,

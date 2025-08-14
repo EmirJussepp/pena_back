@@ -8,7 +8,7 @@ object Users : Table("usuarios") {
     val userId = integer("user_id").autoIncrement() // ID autoincremental
     val name = varchar("nombre", 100)
     val email = varchar("email", 100)
-    val password = varchar("password", 255) // Debería estar encriptada
+    val passwordHash = varchar("password_hash", 255) // <-- columna nueva
     override val primaryKey = PrimaryKey(userId)
 }
 
@@ -17,19 +17,19 @@ data class User(
     val userId: Int? = null, // Puede ser nulo al crearse (autoincremental)
     val name: String,
     val email: String,
-    val password: String
+    val passwordHash: String // guardá el hash, no la contraseña en texto
 ) {
     companion object {
         fun create(
             name: String,
             email: String,
-            password: String
+            passwordHash: String
         ): User {
             return User(
                 userId = null, // La BD generará el ID
                 name = name,
                 email = email,
-                password = password
+                passwordHash  = passwordHash
             )
         }
     }

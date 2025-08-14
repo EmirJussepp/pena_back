@@ -1,29 +1,34 @@
 package com.example.application.commandhandler
+
 import com.example.domain.contracts.IUserRepository
 import com.example.application.command.CreateUserCommand
 import com.example.domain.entities.User
+import com.example.application.security.PasswordService
+
 class CreateUserCommandHandler(
     private val userRepository: IUserRepository
 ) {
     fun handle(command: CreateUserCommand) {
-        try {
-            // Validamos el comando
-            command.validate()
+        // 1) Validaciones de formato/campos
+        command.validate()
 
-            // Creamos el usuario y lo guardamos
-            val user = User.create(
-                command.name,
-                command.email,
-                command.password
-            )
-            userRepository.save(user)
-
-            println("✅ Usuario creado exitosamente")
-
-        } catch (e: IllegalArgumentException) {
-            println("❌ Error: ${e.message}")
-        } catch (e: Exception) {
-            println("⚠️ Error inesperado al crear el usuario: ${e.message}")
+        // 2) No permitir emails duplicados
+        if (userRepository.findByEmail(command.email) != null) {
+            throw IllegalArgumentException("El email ya está registrado")
         }
+
+        // 3) Hashear la contraseña en texto plano
+        val hashed = PasswordService.hash(command.passwordHash)
+
+        // 4) Crear entidad y persistir
+        val user = User.create(
+            name = command.name,
+            email = command.email,
+            passwordHash = hashed
+        )
+        userRepository.save(user)
+
+        // (Opcional) logging
+        println("✅ Usuario creado: ${command.email}")
     }
 }

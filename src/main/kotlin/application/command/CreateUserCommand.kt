@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 class CreateUserCommand(
     val name: String,
     val email: String,
-    val password: String
+    val passwordHash: String
 ) {
 
     fun validate(): CreateUserCommand {
@@ -19,7 +19,7 @@ class CreateUserCommand(
         if (!isValidEmail(email)) {
             throw IllegalArgumentException("El email proporcionado no es válido.")
         }
-        if (!isValidPassword(password)) {
+        if (!isValidPassword(passwordHash)) {
             throw IllegalArgumentException("La contraseña debe tener al menos 7 caracteres y contener una combinación de letras y números.")
         }
         return this
