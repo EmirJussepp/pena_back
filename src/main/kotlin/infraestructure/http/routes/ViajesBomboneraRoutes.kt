@@ -1,6 +1,8 @@
 package com.example.infraestructure.http.routes
 import com.example.application.commandhandler.ViajeBomboneraCommandHandler
 import com.example.application.command.ViajesBombonera.ViajeBomboneraCommand
+import com.example.domain.dto.ViajeBomboneraDto
+import com.example.domain.dto.ViajeBomboneraFiltroResponse
 import com.example.infraestructure.persistence.ViajeBomboneraRepository
 import com.example.infraestructure.persistence.connectToMySql
 import io.ktor.server.application.*
@@ -53,13 +55,30 @@ fun Application.viajeBomboneraRoutes() {
         }
         get("/viajeBomboneraFiltro") {
             val filtro = call.request.queryParameters["filtro"]
-            val mes = call.request.queryParameters["mes"] // espera formato "MM/YYYY"
+            val mes = call.request.queryParameters["mes"]
             val pagina = call.request.queryParameters["pagina"]?.toIntOrNull() ?: 1
-            val tamanio = call.request.queryParameters["tamanio"]?.toIntOrNull() ?: 5
+            val tamanio = call.request.queryParameters["tamanioPagina"]?.toIntOrNull() ?: 3
 
             val viajes = viajeBomboneraRepository.buscarViajes(filtro, mes, pagina, tamanio)
-            call.respond(viajes)
+            val total = viajeBomboneraRepository.contarViajes(filtro, mes)
+
+            val dtoList = viajes.map { v ->
+                ViajeBomboneraDto(
+                    viajeBomboneraId = v.viajeBomboneraId,
+                    fechaViaje = v.fechaViaje.toString(), // formatear si necesitas
+                    destino = v.destino
+                )
+            }
+
+            call.respond(
+                ViajeBomboneraFiltroResponse(
+                    viajes = dtoList,
+                    total = total
+                )
+            )
         }
+
+
 
     }
 }

@@ -5,8 +5,8 @@ services:
     image: mysql:8.0
     container_name: mysql_socios
     environment:
-      MYSQL_ROOT_PASSWORD: "18122022"  # Contraseña del usuario root
-      MYSQL_DATABASE: "pena_socios"     # Base de datos inicial
+      MYSQL_ROOT_PASSWORD: "3564"  # Contraseña del usuario root
+      MYSQL_DATABASE: "pena"     # Base de datos inicial
     ports:
       - "3307:3306"  # Cambia el puerto en tu máquina (3307) para evitar conflicto con otros procesos
     volumes:
@@ -20,6 +20,6 @@ services:
     ports:
       - "8081:8081"  # Mapea el puerto de Ktor al puerto de tu máquina
     environment:
-      - DB_URL=jdbc:mysql://mysql:3307/pena_socios  # URL de conexión de MySQL
+      - DB_URL=jdbc:mysql://mysql:3307/pena  # URL de conexión de MySQL
       - DB_USER=root
-      - DB_PASSWORD=18122022  # Contraseña de root en MySQL
+      - DB_PASSWORD=3564  # Contraseña de root en MySQL

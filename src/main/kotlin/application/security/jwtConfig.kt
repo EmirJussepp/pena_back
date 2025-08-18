@@ -12,18 +12,18 @@ object JwtConfig {
 
     fun algorithm(): Algorithm = alg
 
-    // Overload 1: simple (compat)
-    fun issue(userId: Int, email: String, expiresMs: Long = 1000L * 60 * 60 * 8): String {
-        val now = System.currentTimeMillis()
-        return JWT.create()
-            .withIssuer(issuer)
-            .withAudience(audience)
-            .withClaim("sub", userId)
-            .withClaim("email", email)
-            .withIssuedAt(Date(now))
-            .withExpiresAt(Date(now + expiresMs))
-            .sign(alg)
-    }
+//    // Overload 1: simple (compat)
+//    fun issue(userId: Int, email: String, expiresMs: Long = 1000L * 60 * 60 * 8): String {
+//        val now = System.currentTimeMillis()
+//        return JWT.create()
+//            .withIssuer(issuer)
+//            .withAudience(audience)
+//            .withClaim("sub", userId)
+//            .withClaim("email", email)
+//            .withIssuedAt(Date(now))
+//            .withExpiresAt(Date(now + expiresMs))
+//            .sign(alg)
+//    }
 
     // Overload 2: con roles y permisos (USAR ESTE EN EL LOGIN)
     fun issue(
