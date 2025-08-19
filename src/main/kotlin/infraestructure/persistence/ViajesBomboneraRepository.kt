@@ -6,7 +6,9 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 import com.example.domain.contracts.IViajesBombonera
+
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
+
 
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 
@@ -156,4 +158,16 @@ class ViajeBomboneraRepository(private val database: Database) : IViajesBomboner
                 }
         }
     }
+
+    override fun update(viajeBombonera: ViajeBombonera): ViajeBombonera {
+        return transaction(database) {
+            ViajesBombonera.update({ ViajesBombonera.viajeBomboneraId eq viajeBombonera.viajeBomboneraId!! }) {
+                it[fechaViaje] = viajeBombonera.fechaViaje
+                it[destino] = viajeBombonera.destino
+                // solo los campos de la tabla ViajesBombonera
+            }
+            viajeBombonera
+        }
+    }
+
 }

@@ -1,8 +1,6 @@
 package com.example.application.commandhandler.ViajesPagos
 
-import com.example.domain.contracts.ICobradorRepository
-import com.example.domain.contracts.IMetodoPagoRepository
-import com.example.domain.contracts.IViajesBombonera
+
 import com.example.domain.contracts.IViajesPagosContract
 import com.example.domain.entities.ViajePago
 class ActualizarViajePagoHandler(

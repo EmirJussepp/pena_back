@@ -453,26 +453,7 @@ override fun obtenerPrecioTipoPeña(tipoPeñaId: Int): BigDecimal? {
     override fun existsByEmail(email: String): Boolean =
         transaction { Socios.select { Socios.email eq email }.count() > 0 }
 
-//    fun contarCuotasPagadas(socioId: Int): Int = transaction(database) {
-//        Cuotas.select { (Cuotas.socioId eq socioId) and (Cuotas.estado eq true) }.count().toInt()
-//    }
-//    fun tieneDeuda(socioId: Int): Boolean = transaction(database) {
-//        val ahora = LocalDateTime.now()
-//        Cuotas.select {
-//            (Cuotas.socioId eq socioId) and
-//                    (Cuotas.estado eq false) and
-//                    (Cuotas.fechaVencimiento less ahora)
-//        }.count() > 0
-//    }
-//    fun tieneDeudade2Cuotas(socioId: Int): Boolean = transaction(database) {
-//        val ahora = LocalDateTime.now()
-//        Cuotas.select {
-//            (Cuotas.socioId eq socioId) and
-//                    (Cuotas.estado eq false) and
-//                    (Cuotas.fechaVencimiento less ahora)
-//        }.count() > 2 // Cambié de >0 a >2
-//    }
-//
+
 
 }
 

@@ -33,7 +33,7 @@ fun Application.socioRoutes() {
     beneficioRepository = BeneficioRepository(database, socioRepository)
 
     val cobradorRepository = CobradorRepository(database)
-    val tipoSocioPeñaRepository = SociosPeñaRepository(database)
+    val tipoSocioPenaRepository = SociosPeñaRepository(database)
     val tipoBocaRepository = TipoSocioBocaRepository(database)
     val usuarioRepository = UserRepository(database)
     val localidadRepository = LocalidadRepository(database)
@@ -41,11 +41,11 @@ fun Application.socioRoutes() {
     val cuotaRepository = CuotaRepository(database, beneficioRepository)
 
     val cuotaService = CuotaService(
-        tipoSocioPeñaRepository, cuotaRepository, socioRepository, beneficioRepository
+        tipoSocioPenaRepository, cuotaRepository, socioRepository, beneficioRepository
     )
 
     val createSocioHandler = CreateSocioHandler(
-        socioRepository, localidadRepository, tipoSocioPeñaRepository,
+        socioRepository, localidadRepository, tipoSocioPenaRepository,
         tipoBocaRepository, cobradorRepository, usuarioRepository, cuotaService
     )
 

@@ -1,21 +1,20 @@
 package com.example.application.commandhandler.Socios
 
 import com.example.application.command.Socios.CreateSocioCommand
-import kotlinx.serialization.Serializable
+
 import com.example.domain.entities.Socio
 import com.example.domain.contracts.ISocioPeñaContract
 import com.example.domain.contracts.ISocioRepository
 import com.example.domain.contracts.ILocalidadRepository
 import com.example.domain.contracts.ISocioBocaContract
-import com.example.domain.contracts.ICuotaRepository
+
 import com.example.domain.contracts.ICobradorRepository
 import com.example.domain.contracts.IUserRepository
-import com.example.domain.entities.Cuota
-import kotlinx.datetime.Clock
+
 import com.example.application.Service.CuotaService
 
 import kotlinx.datetime.toKotlinLocalDateTime
-import kotlinx.datetime.toLocalDateTime
+
 import java.time.LocalDateTime
 
 
@@ -25,7 +24,7 @@ import java.time.LocalDateTime
 class CreateSocioHandler(
     private val socioRepository: ISocioRepository,
     private val localidadRepository: ILocalidadRepository,
-    private val tipoSocioPeñaRepository: ISocioPeñaContract,
+    private val tipoSocioPenaRepository: ISocioPeñaContract,
     private val tipoSocioBocaRepository: ISocioBocaContract,
     private val cobradorRepository: ICobradorRepository,
     private val userRepository: IUserRepository,
@@ -46,7 +45,7 @@ class CreateSocioHandler(
         if (cobradorRepository.findById(command.cobradorId) == null)
             throw IllegalArgumentException("El cobrador con ID ${command.cobradorId} no existe")
 
-        if (tipoSocioPeñaRepository.findById(command.tipoSocioPeñaId) == null)
+        if (tipoSocioPenaRepository.findById(command.tipoSocioPeñaId) == null)
             throw IllegalArgumentException("El tipo de socio Peña con ID ${command.tipoSocioPeñaId} no existe")
 
 

@@ -1,6 +1,8 @@
 package com.example.infraestructure.http.routes
+import com.example.application.command.ViajesBombonera.ActualizarViajeBombonera
 import com.example.application.commandhandler.ViajeBomboneraCommandHandler
 import com.example.application.command.ViajesBombonera.ViajeBomboneraCommand
+import com.example.application.commandhandler.ViajesBombonera.ActualizarViajeBomboneraHandler
 import com.example.domain.dto.ViajeBomboneraDto
 import com.example.domain.dto.ViajeBomboneraFiltroResponse
 import com.example.infraestructure.persistence.ViajeBomboneraRepository
@@ -17,6 +19,7 @@ fun Application.viajeBomboneraRoutes() {
     // Conectamos al repositorio de ViajeBombonera
     val viajeBomboneraRepository = ViajeBomboneraRepository(database)
     val viajeBomboneraHandler = ViajeBomboneraCommandHandler(viajeBomboneraRepository)
+    val actualizarViajeBomboneraHandler= ActualizarViajeBomboneraHandler(viajeBomboneraRepository)
 
     routing {
         // Ruta para crear o actualizar un viaje
@@ -32,11 +35,10 @@ fun Application.viajeBomboneraRoutes() {
                 // Guardar el viaje en la base de datos (crear o actualizar)
                 val viajeGuardado = viajeBomboneraHandler.handle(viajeBomboneraCommand)
 
-                // Responder con un mensaje que confirma que el viaje ha sido creado correctamente
-                val mensaje = "El viaje se ha creado correctamente"
+
 
                 // Responder con el mensaje de confirmación
-                call.respond(HttpStatusCode.Created, mensaje)
+                call.respond(HttpStatusCode.Created,viajeGuardado)
             } catch (e: Exception) {
                 println("Error: ${e.message}")
                 call.respond(HttpStatusCode.BadRequest, "Error: ${e.message}")
@@ -76,6 +78,21 @@ fun Application.viajeBomboneraRoutes() {
                     total = total
                 )
             )
+        }
+        patch("/viajesBombonera/{id}") {
+            val id = call.parameters["id"]?.toIntOrNull()
+                ?: return@patch call.respond(HttpStatusCode.BadRequest, "ID inválido")
+
+            val command = call.receive<ActualizarViajeBombonera>()
+
+            try {
+                val viajeActualizado = actualizarViajeBomboneraHandler.handle(command.copy(viajeBomboneraId = id))
+                call.respond(HttpStatusCode.OK, viajeActualizado)
+            } catch (e: IllegalArgumentException) {
+                call.respond(HttpStatusCode.NotFound, e.message ?: "Viaje no encontrado")
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, "Error al actualizar viaje")
+            }
         }
 
 
