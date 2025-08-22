@@ -7,6 +7,7 @@ import com.example.application.command.rbac.CreatePermissionCommand
 import com.example.application.command.rbac.CreateRoleCommand
 import com.example.application.command.rbac.GrantPermissionsToRoleCommand
 import com.example.domain.contracts.*
+import com.example.infraestructure.persistence.RolesRepository
 
 class CreateRoleHandler(private val rolesRepo: RolesContract) {
     fun handle(cmd: CreateRoleCommand): Int {
@@ -29,10 +30,16 @@ class GrantPermissionsToRoleHandler(private val rolePermsRepo: RolePermissionsRe
         cmd.permissions.forEach { rolePermsRepo.grant(cmd.roleName, it) }
     }
 }
-
-class AssignRolesToUserHandler(private val userRolesRepo: UserRolesRepository) {
+class AssignRolesToUserHandler(
+    private val userRolesRepo: IUserRolesRepository,
+    private val rolesRepo: RolesRepository
+) {
     fun handle(cmd: AssignRolesToUserCommand) {
         require(cmd.roles.isNotEmpty()) { "Roles requeridos" }
-        cmd.roles.forEach { userRolesRepo.assign(cmd.userId, it) }
+
+        cmd.roles.forEach { roleName ->
+            val roleId = rolesRepo.getIdByName(roleName) ?: throw IllegalArgumentException("Rol $roleName no existe")
+            userRolesRepo.assign(cmd.userId, roleId)
+        }
     }
 }

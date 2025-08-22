@@ -2,7 +2,12 @@
 package com.example.infraestructure.persistence
 
 import com.example.domain.contracts.IUserRepository
+import com.example.domain.dto.UsuarioConRoles
+import com.example.domain.dto.Role
+
+import com.example.domain.entities.Roles
 import com.example.domain.entities.User
+import com.example.domain.entities.UserRoles
 import com.example.domain.entities.Users
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -13,23 +18,38 @@ class UserRepository(private val database: Database) : IUserRepository {
         transaction(database) { SchemaUtils.create(Users) }
     }
 
-    override fun save(user: User) {
-        transaction(database) {
-            val existing = Users.select { Users.email eq user.email }.singleOrNull()
-            if (existing == null) {
-                Users.insert {
+    override fun save(user: User): User {
+        return transaction(database) {
+            val existingUser = Users.select { Users.email eq user.email }.singleOrNull()
+
+            if (existingUser == null) {
+                // Insertar nuevo usuario
+                val insertedId = Users.insert {
                     it[name] = user.name
                     it[email] = user.email
                     it[passwordHash] = user.passwordHash
-                }
+                } get Users.userId
+
+                // Obtener el usuario recién insertado
+                Users.select { Users.userId eq insertedId }.map { row ->
+                    User(
+                        userId = row[Users.userId],
+                        name = row[Users.name],
+                        email = row[Users.email],
+                        passwordHash = row[Users.passwordHash]
+                    )
+                }.first()
             } else {
+                // Actualizar usuario existente
                 Users.update({ Users.email eq user.email }) {
                     it[name] = user.name
                     it[passwordHash] = user.passwordHash
                 }
+                user.copy(userId = existingUser[Users.userId])
             }
         }
     }
+
 
     override fun findById(userId: Int): User? = transaction(database) {
         Users.select { Users.userId eq userId }.map {
@@ -88,5 +108,21 @@ class UserRepository(private val database: Database) : IUserRepository {
             .select { Users.email eq email }
             .firstOrNull()
             ?.let { it[Users.passwordHash] to it[Users.userId] }
+    }
+    override fun obtenerTodosConRoles(): List<UsuarioConRoles> = transaction {
+        val usuarios = Users.selectAll().map { it[Users.userId] to it }.toMap()
+        val rolesMap = UserRoles.innerJoin(Roles)
+            .selectAll()
+            .groupBy({ it[UserRoles.userId] }) { it[Roles.roleId] to it[Roles.name] }
+
+        usuarios.map { (userId, row) ->
+            UsuarioConRoles(
+                userId = userId,
+                name = row[Users.name],
+                email = row[Users.email],
+                password = "",
+                roles = rolesMap[userId]?.map { (id, name) -> Role(id, name, null) } ?: emptyList()
+            )
+        }
     }
 }
