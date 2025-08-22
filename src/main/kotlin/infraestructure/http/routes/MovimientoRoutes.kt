@@ -2,6 +2,8 @@ package com.example.infraestructure.http.routes
 
 import com.example.application.command.Movimientos.CrearMovimientoCommand
 import com.example.application.commandhandler.Movimientos.MovimientoCommandHandler
+import com.example.application.security.requireAny
+import com.example.application.security.requirePerm
 import com.example.domain.contracts.MovimientoContract
 import com.example.domain.entities.BalanceResponse
 import com.example.domain.entities.BalanceSemanalResponse
@@ -10,6 +12,7 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.http.*
+import io.ktor.server.auth.*
 import io.ktor.server.routing.*
 import java.time.LocalDate
 import java.time.YearMonth
@@ -19,8 +22,13 @@ fun Application.movimientoRoutes(
     movimientoCommandHandler: MovimientoCommandHandler
 ) {
     routing {
+        authenticate ("auth-jwt"){
+
+
+
         // Crear un nuevo movimiento
         post("/movimientos") {
+            if (!requirePerm(call, "movimientos:gestionar")) return@post
             try {
                 val command = call.receive<CrearMovimientoCommand>()
                 val movimiento = movimientoCommandHandler.handle(command)
@@ -34,6 +42,7 @@ fun Application.movimientoRoutes(
 
         // Obtener un movimiento por ID
         get("/movimientos/{id}") {
+            if (!requireAny(call, "movimientos:ver", "movimientos:gestionar")) return@get
             try {
                 val id = call.parameters["id"]?.toIntOrNull()
                     ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
@@ -51,6 +60,7 @@ fun Application.movimientoRoutes(
 
         // Obtener todos los movimientos
         get("/movimientos") {
+            if (!requireAny(call, "movimientos:ver", "movimientos:gestionar")) return@get
             try {
                 val movimientos = movimientoRepository.findAll()
                 call.respond(movimientos)
@@ -61,6 +71,7 @@ fun Application.movimientoRoutes(
 
         // Actualizar un movimiento existente
         patch("/movimientos/{id}") {
+            if (!requirePerm(call, "movimientos:gestionar")) return@patch
             try {
                 val id = call.parameters["id"]?.toIntOrNull()
                     ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
@@ -76,21 +87,28 @@ fun Application.movimientoRoutes(
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al actualizar movimiento"))
             }
         }
-        // Eliminar un movimiento
+
         delete("/movimientos/{id}") {
+            if (!requirePerm(call, "movimientos:gestionar")) return@delete
             val id = call.parameters["id"]?.toIntOrNull()
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
 
-            val eliminado = movimientoRepository.eliminarPorId(id)
+            // Ejemplo: obtener userId del header o principal (ajustar según tu auth)
+            val userId = call.request.headers["X-User-Id"]?.toIntOrNull()
+                ?: return@delete call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Usuario no autenticado"))
+
+            val eliminado = movimientoRepository.eliminarPorId(id, userId)
             if (eliminado) {
-                call.respond(HttpStatusCode.OK, mapOf("message" to "Movimiento eliminado"))
+                call.respond(HttpStatusCode.OK, mapOf("message" to "Movimiento eliminado lógicamente"))
             } else {
                 call.respond(HttpStatusCode.NotFound, mapOf("error" to "Movimiento no encontrado"))
             }
         }
 
 
+
         get("/balance") {
+            if (!requireAny(call, "movimientos:ver", "movimientos:gestionar")) return@get
             try {
                 val balance = movimientoRepository.calcularBalance()
                 call.respond(HttpStatusCode.OK, mapOf("balanceTotal" to balance))
@@ -101,6 +119,7 @@ fun Application.movimientoRoutes(
         }
 
         get("/balance/semanal") {
+            if (!requireAny(call, "movimientos:ver", "movimientos:gestionar")) return@get
             try {
                 val desdeStr = call.request.queryParameters["desde"]
                 val hastaStr = call.request.queryParameters["hasta"]
@@ -131,6 +150,7 @@ fun Application.movimientoRoutes(
         }
 
         get("/balance/mensual") {
+            if (!requireAny(call, "movimientos:ver", "movimientos:gestionar")) return@get
             try {
                 val mesParam = call.request.queryParameters["mes"]
                 if (mesParam.isNullOrBlank()) {
@@ -157,10 +177,23 @@ fun Application.movimientoRoutes(
             }
         }
 
-
-
-
+        }
 
 
     }
 }
+
+
+
+//        // Eliminar un movimiento
+//        delete("/movimientos/{id}") {
+//            val id = call.parameters["id"]?.toIntOrNull()
+//                ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
+//
+//            val eliminado = movimientoRepository.eliminarPorId(id)
+//            if (eliminado) {
+//                call.respond(HttpStatusCode.OK, mapOf("message" to "Movimiento eliminado"))
+//            } else {
+//                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Movimiento no encontrado"))
+//            }
+//        }

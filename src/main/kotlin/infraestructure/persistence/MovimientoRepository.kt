@@ -8,9 +8,10 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlinx.datetime.toJavaLocalDateTime
 import kotlinx.datetime.toKotlinLocalDateTime
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 import java.time.YearMonth
 
@@ -66,7 +67,7 @@ class MovimientoRepository(private val database: Database) : MovimientoContract 
     // Obtener todos los movimientos
     override suspend fun findAll(): List<Movimiento> {
         return transaction(database) {
-            Movimientos.selectAll()
+            Movimientos.select { Movimientos.activo eq true } // solo activos
                 .map {
                     Movimiento(
                         movimientoId = it[Movimientos.movimientoId],
@@ -79,6 +80,7 @@ class MovimientoRepository(private val database: Database) : MovimientoContract 
                 }
         }
     }
+
     override suspend fun calcularBalance(): BigDecimal {
         val movimientos = findAll()
         val (total, _, _) = calcularBalancePorMetodoDesdeLista(movimientos)
@@ -137,72 +139,24 @@ class MovimientoRepository(private val database: Database) : MovimientoContract 
     }
 
 
-//    override suspend fun calcularBalance(): BigDecimal {
-//        val movimientos = findAll() // o usar transaction si lo preferís
-//        return movimientos.fold(BigDecimal.ZERO) { acc, movimiento ->
-//            when (movimiento.tipo.lowercase()) {
-//                "ingreso" -> acc + movimiento.monto
-//                "egreso" -> acc - movimiento.monto
-//                else -> acc
-//            }
+
+//    override suspend fun eliminarPorId(movimientosId: Int): Boolean {
+//        return transaction(database) {
+//            val deletedCount = Movimientos.deleteWhere { Movimientos.movimientoId eq movimientosId }
+//            deletedCount > 0
 //        }
 //    }
-//
-//    override suspend fun calcularBalanceMensual(mes: YearMonth): Pair<BigDecimal, List<Movimiento>> {
-//        val movimientos = findAll().filter {
-//            try {
-//                val fecha = it.fecha.toJavaLocalDateTime()
-//                YearMonth.from(fecha) == mes
-//            } catch (e: Exception) {
-//                println("❌ Error parseando fecha en movimiento ${it.movimientoId}: ${e.message}")
-//                false
-//            }
-//        }
-//
-//        val balance = movimientos.fold(BigDecimal.ZERO) { acc, m ->
-//            try {
-//                when (m.tipo.lowercase()) {
-//                    "ingreso" -> acc + m.monto
-//                    "egreso" -> acc - m.monto
-//                    else -> {
-//                        println("⚠️ Tipo inválido en movimiento ${m.movimientoId}: ${m.tipo}")
-//                        acc
-//                    }
-//                }
-//            } catch (e: Exception) {
-//                println("❌ Error calculando balance para movimiento ${m.movimientoId}: ${e.message}")
-//                acc
-//            }
-//        }
-//
-//        return balance to movimientos
-//    }
-//
-//    override suspend fun calcularBalanceSemanal(desde: LocalDate, hasta: LocalDate): Pair<BigDecimal, List<Movimiento>> {
-//        val movimientos = findAll().filter {
-//            val fecha = it.fecha.toJavaLocalDateTime().toLocalDate()
-//            !fecha.isBefore(desde) && !fecha.isAfter(hasta)
-//        }
-//
-//        val balance = movimientos.fold(BigDecimal.ZERO) { acc, m ->
-//            when (m.tipo.lowercase()) {
-//                "ingreso" -> acc + m.monto
-//                "egreso" -> acc - m.monto
-//                else -> acc
-//            }
-//        }
-//
-//        return balance to movimientos
-//    }
-
-
-
-    override suspend fun eliminarPorId(movimientosId: Int): Boolean {
-        return transaction(database) {
-            val deletedCount = Movimientos.deleteWhere { Movimientos.movimientoId eq movimientosId }
-            deletedCount > 0
+override suspend fun eliminarPorId(movimientoId: Int, userId: Int): Boolean {
+    return transaction(database) {
+        val updatedCount = Movimientos.update({ Movimientos.movimientoId eq movimientoId }) {
+            it[activo] = false
+            it[userIdEliminador] = userId
+            it[fechaEliminacion] = LocalDateTime.now()
         }
+        updatedCount > 0
     }
+}
+
 
     override suspend fun findMovimientosPorRango(desde: LocalDate, hasta: LocalDate): List<Movimiento> {
         return findAll().filter {
