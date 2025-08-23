@@ -1,16 +1,13 @@
 package com.example.domain.entities
 
-import com.example.domain.entities.AlquilerSalones.references
+
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.javatime.datetime
 import java.math.BigDecimal
 import kotlinx.datetime.LocalDateTime
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
 
-import kotlinx.datetime.toLocalDateTime
 
 object Movimientos : Table("movimientos") {
     val movimientoId = integer("movimiento_id").autoIncrement()
@@ -19,6 +16,13 @@ object Movimientos : Table("movimientos") {
     val monto = decimal("monto", 10, 2)
     val descripcion = text("descripcion").nullable()
     val metodoPagoId = integer("metodo_pago_id").references(metodosPago.metodoPagoId)
+
+
+
+    val activo = bool("activo").default(true)
+    val userIdEliminador = integer("user_id_eliminador").references(Users.userId)
+    val fechaEliminacion = datetime("fecha_eliminacion").nullable()
+
 
     override val primaryKey = PrimaryKey(movimientoId)
 }
@@ -30,7 +34,11 @@ data class Movimiento(
     val tipo: String, // Validar que sea "ingreso" o "egreso"
     @Contextual val monto: BigDecimal,
     val descripcion: String?,
-    val metodoPagoId: Int
+    val metodoPagoId: Int,
+
+    val activo: Boolean = true,               // 👈 agregado
+    val userIdEliminador: Int? = null,        // 👈 agregado
+    val fechaEliminacion: LocalDateTime? = null // 👈 agregado
 ) {
     companion object {
         fun create(
@@ -47,7 +55,11 @@ data class Movimiento(
                 tipo = tipo,
                 monto = monto,
                 descripcion = descripcion,
-                metodoPagoId= metodoPagoId
+                metodoPagoId= metodoPagoId,
+                activo = true,
+                userIdEliminador = null,
+                fechaEliminacion = null
+
             )
         }
     }

@@ -1,6 +1,7 @@
 package com.example.domain.contracts
 
-interface UserRolesRepository {
-    fun assign(userId: Int, roleName: String): Boolean
+interface IUserRolesRepository {
+    fun assign(userId: Int, roleId: Int): Boolean
     fun getRolesForUser(userId: Int): List<String>
+
 }

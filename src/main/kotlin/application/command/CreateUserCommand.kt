@@ -6,20 +6,20 @@ import kotlinx.serialization.Serializable
 class CreateUserCommand(
     val name: String,
     val email: String,
-    val passwordHash: String
+    val password: String,
+//    val roles: List<Int>
+    val roles: List<String>
 ) {
 
     fun validate(): CreateUserCommand {
         if (name.isEmpty()) {
             throw IllegalArgumentException("El nombre de usuario no debe ser vacio.")
         }
-//        if(surname.isEmpty()){
-//            throw IllegalArgumentException("El apellido no debe ser vacio.")
-//        }
+
         if (!isValidEmail(email)) {
             throw IllegalArgumentException("El email proporcionado no es válido.")
         }
-        if (!isValidPassword(passwordHash)) {
+        if (!isValidPassword(password)) {
             throw IllegalArgumentException("La contraseña debe tener al menos 7 caracteres y contener una combinación de letras y números.")
         }
         return this

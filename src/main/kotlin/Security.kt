@@ -20,13 +20,16 @@ fun Application.configureSecurity() {
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Authorization)    // <-- necesario para Bearer tokens
         allowCredentials = true
+        allowHeader(HttpHeaders.Authorization)
+        allowHeader("X-User-Id") // tu header personalizado
 
+
+
+        // Origenes permitidos
+        anyHost() // ⚠️ Solo para desarrollo, en producción limitar a tu frontend real
         // Dev: permití tu front
         allowHost("localhost:8080", schemes = listOf("http"))
-        // Si estás usando Vite/ otro puerto:
-        // allowHost("localhost:5173", schemes = listOf("http"))
 
-        // Para JSON con Content-Type "application/json"
         allowNonSimpleContentTypes = true
     }
 
