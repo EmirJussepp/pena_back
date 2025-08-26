@@ -7,7 +7,7 @@ class CreateUserCommand(
     val name: String,
     val email: String,
     val password: String,
-//    val roles: List<Int>
+
     val roles: List<String>
 ) {
 

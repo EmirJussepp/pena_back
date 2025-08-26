@@ -4,12 +4,10 @@ package com.example.infraestructure.persistence
 import com.example.domain.contracts.IUserRepository
 import com.example.domain.dto.UsuarioConRoles
 import com.example.domain.dto.Role
+import com.example.domain.entities.*
 
-import com.example.domain.entities.Roles
-import com.example.domain.entities.User
-import com.example.domain.entities.UserRoles
-import com.example.domain.entities.Users
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class UserRepository(private val database: Database) : IUserRepository {
@@ -125,4 +123,36 @@ class UserRepository(private val database: Database) : IUserRepository {
             )
         }
     }
+    override fun update(userId: Int, newName: String, newEmail: String) {
+        transaction(database) {
+            Users.update({ Users.userId eq userId }) {
+                it[name] = newName
+                it[email] = newEmail
+            }
+        }
+    }
+    override suspend fun eliminarPorId(userId: Int): Boolean {
+        return transaction(database) {
+            try {
+                // 1️⃣ Eliminar roles asignados al usuario
+                UserRoles.deleteWhere { UserRoles.userId eq userId }
+
+                // 2️⃣ Poner user_id = NULL en socios relacionados
+                Socios.update({ Socios.userId eq userId }) {
+                    it[Socios.userId] = null
+                }
+
+                // 3️⃣ Eliminar el usuario
+                val deletedCount = Users.deleteWhere { Users.userId eq userId }
+
+                deletedCount > 0
+            } catch (e: Exception) {
+                println("Error eliminando usuario: ${e.message}")
+                false
+            }
+        }
+    }
+
+
+
 }
