@@ -7,7 +7,7 @@ import com.example.domain.dto.Role
 import com.example.domain.entities.*
 
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class UserRepository(private val database: Database) : IUserRepository {
@@ -83,14 +83,17 @@ class UserRepository(private val database: Database) : IUserRepository {
     }
 
     override fun obtenerTodos(): List<User> = transaction(database) {
-        Users.selectAll().map {
-            User(
-                userId = it[Users.userId],
-                name = it[Users.name],
-                email = it[Users.email],
-                passwordHash = it[Users.passwordHash]
-            )
-        }
+        Users
+            .select { Users.activo eq true } // 👈 solo usuarios activos
+            .map {
+                User(
+                    userId = it[Users.userId],
+                    name = it[Users.name],
+                    email = it[Users.email],
+                    passwordHash = it[Users.passwordHash]
+                    // si querés, también podés traer el campo activo
+                )
+            }
     }
 
     override fun updateHash(userId: Int, newHash: String) {
@@ -108,7 +111,11 @@ class UserRepository(private val database: Database) : IUserRepository {
             ?.let { it[Users.passwordHash] to it[Users.userId] }
     }
     override fun obtenerTodosConRoles(): List<UsuarioConRoles> = transaction {
-        val usuarios = Users.selectAll().map { it[Users.userId] to it }.toMap()
+        val usuarios = Users
+            .select { Users.activo eq true }   // 👈 filtro acá
+            .map { it[Users.userId] to it }
+            .toMap()
+
         val rolesMap = UserRoles.innerJoin(Roles)
             .selectAll()
             .groupBy({ it[UserRoles.userId] }) { it[Roles.roleId] to it[Roles.name] }
@@ -123,6 +130,7 @@ class UserRepository(private val database: Database) : IUserRepository {
             )
         }
     }
+
     override fun update(userId: Int, newName: String, newEmail: String) {
         transaction(database) {
             Users.update({ Users.userId eq userId }) {
@@ -133,25 +141,14 @@ class UserRepository(private val database: Database) : IUserRepository {
     }
     override suspend fun eliminarPorId(userId: Int): Boolean {
         return transaction(database) {
-            try {
-                // 1️⃣ Eliminar roles asignados al usuario
-                UserRoles.deleteWhere { UserRoles.userId eq userId }
-
-                // 2️⃣ Poner user_id = NULL en socios relacionados
-                Socios.update({ Socios.userId eq userId }) {
-                    it[Socios.userId] = null
-                }
-
-                // 3️⃣ Eliminar el usuario
-                val deletedCount = Users.deleteWhere { Users.userId eq userId }
-
-                deletedCount > 0
-            } catch (e: Exception) {
-                println("Error eliminando usuario: ${e.message}")
-                false
+            val updatedCount = Users.update({ Users.userId eq userId }) {
+                it[activo] = false
             }
+            updatedCount > 0
         }
     }
+
+
 
 
 
