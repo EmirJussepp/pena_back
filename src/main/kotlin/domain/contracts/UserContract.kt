@@ -12,4 +12,6 @@ interface IUserRepository {
     fun obtenerTodosConRoles(): List<UsuarioConRoles>
     fun updateHash(userId: Int, newHash: String)        // <-- importante
     fun getHashAndIdByEmail(email: String): Pair<String, Int>?
+    fun update(userId: Int, newName: String, newEmail: String)
+    suspend fun eliminarPorId(userId: Int): Boolean
 }

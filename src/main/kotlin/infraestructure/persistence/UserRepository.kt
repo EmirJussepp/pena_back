@@ -4,12 +4,10 @@ package com.example.infraestructure.persistence
 import com.example.domain.contracts.IUserRepository
 import com.example.domain.dto.UsuarioConRoles
 import com.example.domain.dto.Role
+import com.example.domain.entities.*
 
-import com.example.domain.entities.Roles
-import com.example.domain.entities.User
-import com.example.domain.entities.UserRoles
-import com.example.domain.entities.Users
 import org.jetbrains.exposed.sql.*
+
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class UserRepository(private val database: Database) : IUserRepository {
@@ -85,14 +83,17 @@ class UserRepository(private val database: Database) : IUserRepository {
     }
 
     override fun obtenerTodos(): List<User> = transaction(database) {
-        Users.selectAll().map {
-            User(
-                userId = it[Users.userId],
-                name = it[Users.name],
-                email = it[Users.email],
-                passwordHash = it[Users.passwordHash]
-            )
-        }
+        Users
+            .select { Users.activo eq true } // 👈 solo usuarios activos
+            .map {
+                User(
+                    userId = it[Users.userId],
+                    name = it[Users.name],
+                    email = it[Users.email],
+                    passwordHash = it[Users.passwordHash]
+                    // si querés, también podés traer el campo activo
+                )
+            }
     }
 
     override fun updateHash(userId: Int, newHash: String) {
@@ -110,7 +111,11 @@ class UserRepository(private val database: Database) : IUserRepository {
             ?.let { it[Users.passwordHash] to it[Users.userId] }
     }
     override fun obtenerTodosConRoles(): List<UsuarioConRoles> = transaction {
-        val usuarios = Users.selectAll().map { it[Users.userId] to it }.toMap()
+        val usuarios = Users
+            .select { Users.activo eq true }   // 👈 filtro acá
+            .map { it[Users.userId] to it }
+            .toMap()
+
         val rolesMap = UserRoles.innerJoin(Roles)
             .selectAll()
             .groupBy({ it[UserRoles.userId] }) { it[Roles.roleId] to it[Roles.name] }
@@ -125,4 +130,26 @@ class UserRepository(private val database: Database) : IUserRepository {
             )
         }
     }
+
+    override fun update(userId: Int, newName: String, newEmail: String) {
+        transaction(database) {
+            Users.update({ Users.userId eq userId }) {
+                it[name] = newName
+                it[email] = newEmail
+            }
+        }
+    }
+    override suspend fun eliminarPorId(userId: Int): Boolean {
+        return transaction(database) {
+            val updatedCount = Users.update({ Users.userId eq userId }) {
+                it[activo] = false
+            }
+            updatedCount > 0
+        }
+    }
+
+
+
+
+
 }
