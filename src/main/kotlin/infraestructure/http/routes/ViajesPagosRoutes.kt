@@ -2,7 +2,9 @@ package com.example.infraestructure.http.routes
 import com.example.application.commandhandler.ViajesPagos.ViajePagoCommandHandler
 import com.example.application.command.ViajesPagos.CreateViajesPagosCommand
 import com.example.application.commandhandler.ViajesPagos.ActualizarViajePagoHandler
+
 import com.example.domain.entities.ViajePago
+
 import com.example.infraestructure.persistence.connectToMySql
 import com.example.infraestructure.persistence.ViajesPagosRepository
 import io.ktor.server.application.*
@@ -11,6 +13,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.jetbrains.exposed.sql.Database
+
 
 fun Application.viajesPagosRoutes() {
     val database: Database = connectToMySql() ?: error("Error connecting to MySQL database")
@@ -40,17 +43,7 @@ fun Application.viajesPagosRoutes() {
                 call.respond(HttpStatusCode.BadRequest, "Error: ${e.message}")
             }
         }
-        get("viajePagos"){
 
-            try {
-                val viajesPagos = viajesPagosRepository.findAll()
-                call.respond(viajesPagos)
-            } catch (e: Exception) {
-                println("❌ Error al obtener viaje: ${e.message}")
-                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al viaje pago"))
-            }
-
-        }
         get("/viajePagos/{viajeId}") {
             try {
                 val viajeId = call.parameters["viajeId"]?.toIntOrNull()
@@ -64,16 +57,18 @@ fun Application.viajesPagosRoutes() {
                 call.respond(HttpStatusCode.InternalServerError, "Error al obtener pagos")
             }
         }
-        // NUEVA RUTA: Listar todos los pagos con detalles completos (método pago + cobrador)
+
         get("/viajePagosFull") {
-            try {
-                val pagosCompletos = viajesPagosRepository.findAllConCobradorYMetodo()
-                call.respond(pagosCompletos)
-            } catch (e: Exception) {
-                println("❌ Error al obtener pagos completos: ${e.message}")
-                call.respond(HttpStatusCode.InternalServerError, "Error al obtener pagos completos")
-            }
+            val viajeId = call.request.queryParameters["viajeId"]?.toIntOrNull()
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "Falta viajeId")
+            val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
+            val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 10
+
+            val resultado = viajesPagosRepository.findByViajeIdConPaginacionFull(viajeId, page, pageSize)
+            call.respond(resultado)
         }
+
+
         delete("/viajePagos/{id}") {
             val id = call.parameters["id"]?.toIntOrNull()
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID Invalido"))
@@ -105,7 +100,28 @@ fun Application.viajesPagosRoutes() {
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al actualizar ViajePago"))
             }
         }
+        // NUEVA RUTA: Listar todos los pagos con detalles completos (método pago + cobrador)
+//        get("/viajePagosFull") {
+//            try {
+//                val pagosCompletos = viajesPagosRepository.findAllConCobradorYMetodo()
+//                call.respond(pagosCompletos)
+//            } catch (e: Exception) {
+//                println("❌ Error al obtener pagos completos: ${e.message}")
+//                call.respond(HttpStatusCode.InternalServerError, "Error al obtener pagos completos")
+//            }
+//        }
 
+//        get("viajePagos"){
+//
+//            try {
+//                val viajesPagos = viajesPagosRepository.findAll()
+//                call.respond(viajesPagos)
+//            } catch (e: Exception) {
+//                println("❌ Error al obtener viaje: ${e.message}")
+//                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al viaje pago"))
+//            }
+//
+//        }
 
     }
 }

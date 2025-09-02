@@ -6,11 +6,14 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 import com.example.domain.contracts.IViajesBombonera
+import com.example.domain.dto.ViajeBomboneraDto
+import com.example.domain.entities.ViajesPagos
 
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
 
 
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
+
 
 import java.time.LocalDate
 
@@ -133,31 +136,33 @@ class ViajeBomboneraRepository(private val database: Database) : IViajesBomboner
 
 
     // Buscar viajes con paginación y filtros
-    fun buscarViajes(
-        filtro: String? = null,
-        mesAnio: String? = null,
-        pagina: Int = 1,
-        tamanioPagina: Int = 3
-    ): List<ViajeBombonera> {
-        return transaction(database) {
-            val condicionFinal = generarCondiciones(filtro, mesAnio)
-            val query = if (condicionFinal != null) {
-                ViajesBombonera.select { condicionFinal }
-            } else {
-                ViajesBombonera.selectAll()
-            }
-
-            query.orderBy(ViajesBombonera.fechaViaje to SortOrder.DESC)
-                .limit(tamanioPagina, offset = ((pagina - 1) * tamanioPagina).toLong())
-                .map {
-                    ViajeBombonera(
-                        viajeBomboneraId = it[ViajesBombonera.viajeBomboneraId],
-                        fechaViaje = it[ViajesBombonera.fechaViaje],
-                        destino = it[ViajesBombonera.destino]
-                    )
-                }
-        }
-    }
+//    fun buscarViajes(
+//        filtro: String? = null,
+//        mesAnio: String? = null,
+//        pagina: Int = 1,
+//        tamanioPagina: Int = 3
+//    ): List<ViajeBombonera> {
+//        return transaction(database) {
+//            val condicionFinal = generarCondiciones(filtro, mesAnio)
+//            val query = if (condicionFinal != null) {
+//                ViajesBombonera.select { condicionFinal }
+//            } else {
+//                ViajesBombonera.selectAll()
+//            }
+//
+//            query.orderBy(ViajesBombonera.fechaViaje to SortOrder.DESC)
+//                .limit(tamanioPagina, offset = ((pagina - 1) * tamanioPagina).toLong())
+//                .map {
+//                    ViajeBombonera(
+//                        viajeBomboneraId = it[ViajesBombonera.viajeBomboneraId],
+//                        fechaViaje = it[ViajesBombonera.fechaViaje],
+//                        destino = it[ViajesBombonera.destino],
+//
+//
+//                    )
+//                }
+//        }
+//    }
 
     override fun update(viajeBombonera: ViajeBombonera): ViajeBombonera {
         return transaction(database) {
@@ -169,5 +174,45 @@ class ViajeBomboneraRepository(private val database: Database) : IViajesBomboner
             viajeBombonera
         }
     }
+    fun buscarViajesConTotales(
+        filtro: String? = null,
+        mes: Int? = null,  // mejor usar Int para filtrar por mes
+        pagina: Int = 1,
+        tamanioPagina: Int = 3
+    ): List<ViajeBomboneraDto> {
+        return transaction(database) {
+            val condicionFinal = generarCondiciones(filtro, mes.toString())
+
+            val query = if (condicionFinal != null) {
+                ViajesBombonera.select { condicionFinal }
+            } else {
+                ViajesBombonera.selectAll()
+            }
+
+            query.orderBy(ViajesBombonera.fechaViaje to SortOrder.DESC)
+                .limit(tamanioPagina, offset = ((pagina - 1) * tamanioPagina).toLong())
+                .map { row ->
+                    val viajeId = row[ViajesBombonera.viajeBomboneraId]
+
+                    // Calcular totales de pasajeros y monto
+                    val pagos = ViajesPagos.select { ViajesPagos.viajeId eq viajeId }
+                    val totalPasajeros = pagos.count()
+                    val totalMonto = pagos.sumOf { it[ViajesPagos.monto].toDouble() }
+
+                    ViajeBomboneraDto(
+                        viajeBomboneraId = viajeId,
+                        fechaViaje = row[ViajesBombonera.fechaViaje].toString(),
+                        destino = row[ViajesBombonera.destino],
+                        totalPasajeros = totalPasajeros.toInt(),
+                        totalMonto = totalMonto
+                    )
+                }
+
+        }
+    }
+
+
+
+
 
 }

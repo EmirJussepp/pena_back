@@ -15,15 +15,16 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
 
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
 
 
-import org.jetbrains.exposed.sql.javatime.month
-import org.jetbrains.exposed.sql.javatime.year
+
 import java.math.BigDecimal
+import java.time.Year
 
 
 class CuotaRepository(
@@ -139,67 +140,84 @@ override fun existeCuotaEnMes(socioId: Int, mes: Int, anio: Int): Boolean = tran
             .firstOrNull()
     }
 
-override fun obtenerCuotasVencidasPorCobrador(
-    cobradorId: Int,
-    mes: Int?,
-    anio: Int?,
-    dni: String?,
-    page: Int,
-    pageSize: Int
-): List<CuotaDTO> {
-    return transaction {
-//        var condicion = (Cuotas.estado eq false) and
-//               (Cuotas.fechaVencimiento less LocalDateTime.now()) and
-//                (Socios.cobradorId eq cobradorId)
-        val ahora = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-        val inicioDeHoy = LocalDateTime(ahora.year, ahora.monthNumber, ahora.dayOfMonth, 0, 0)
-        val inicioDeHoyJava = inicioDeHoy.toJavaLocalDateTime()
+    override fun obtenerCuotasVencidasPorCobrador(
+        cobradorId: Int,
+        mes: Int?,
+        anio: Int?,
+        dni: String?,
+        page: Int,
+        pageSize: Int
+    ): List<CuotaDTO> {
+        return transaction {
+            val ahora = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            val finDeHoy = LocalDateTime(ahora.year, ahora.monthNumber, ahora.dayOfMonth, 23, 59, 59)
+            val finDeHoyJava = finDeHoy.toJavaLocalDateTime()
 
-        var condicion = (Cuotas.estado eq false) and
-                (Cuotas.fechaVencimiento lessEq inicioDeHoyJava) and
-                (Socios.cobradorId eq cobradorId)
-        if (anio != null) {
-            condicion = condicion and (Cuotas.fechaVencimiento.year() eq anio)
-        }
+            // Condición base: cuotas impagas vencidas del cobrador
+            var condicion = (Cuotas.estado eq false) and
+                    (Cuotas.fechaVencimiento lessEq finDeHoyJava) and
+                    (Socios.cobradorId eq cobradorId)
 
-        if (mes != null) {
-            condicion = condicion and (Cuotas.fechaVencimiento.month() eq mes)
-        }
-
-        if (!dni.isNullOrBlank()) {
-            condicion = condicion and (Socios.dni eq dni)
-        }
-
-        println("⚙️ Filtros aplicados => cobradorId: $cobradorId, mes: $mes, año: $anio, dni: $dni")
-        println("📜 Condición Exposed: $condicion")
-
-        val resultados = (Cuotas innerJoin Socios)
-            .select { condicion }
-            .toList()
-
-        println("🔢 Cantidad de cuotas encontradas: ${resultados.size}")
-
-        resultados
-            .drop((page - 1) * pageSize)
-            .take(pageSize)
-            .map {
-                CuotaDTO(
-                    cuotaId = it[Cuotas.cuotaId],
-                    socioId = it[Socios.socioId],
-                    nombreSocio = "${it[Socios.nombre]} ${it[Socios.apellido]}",
-                    dni = it[Socios.dni],
-                    monto = it[Cuotas.monto].toDouble(),
-                    fechaVencimiento = it[Cuotas.fechaVencimiento],
-                    estado = it[Cuotas.estado],
-                    direccionSocio = "${it[Socios.direccion]}",
-                    telefonoSocio = it[Socios.telefono]
-
-
-                )
+            // Filtro por mes y año usando rango de fechas
+            if (anio != null && mes != null) {
+                val fechaInicio = LocalDateTime(anio, mes, 1, 0, 0).toJavaLocalDateTime()
+                val fechaFin = LocalDateTime(
+                    anio,
+                    mes,
+                    Month.of(mes).length(Year.isLeap(anio.toLong())),
+                    23, 59, 59
+                ).toJavaLocalDateTime()
+                condicion = condicion and (Cuotas.fechaVencimiento.between(fechaInicio, fechaFin))
+            } else if (anio != null) {
+                val fechaInicio = LocalDateTime(anio, 1, 1, 0, 0).toJavaLocalDateTime()
+                val fechaFin = LocalDateTime(anio, 12, 31, 23, 59, 59).toJavaLocalDateTime()
+                condicion = condicion and (Cuotas.fechaVencimiento.between(fechaInicio, fechaFin))
+            } else if (mes != null) {
+                val fechaInicio = LocalDateTime(ahora.year, mes, 1, 0, 0).toJavaLocalDateTime()
+                val fechaFin = LocalDateTime(
+                    ahora.year,
+                    mes,
+                    Month.of(mes).length(Year.isLeap(ahora.year.toLong())),
+                    23, 59, 59
+                ).toJavaLocalDateTime()
+                condicion = condicion and (Cuotas.fechaVencimiento.between(fechaInicio, fechaFin))
             }
+
+            // Filtro por DNI opcional
+            if (!dni.isNullOrBlank()) {
+                condicion = condicion and (Socios.dni eq dni)
+            }
+
+            println("⚙️ Filtros aplicados => cobradorId: $cobradorId, mes: $mes, año: $anio, dni: $dni")
+            println("📜 Condición Exposed: $condicion")
+
+            val resultados = (Cuotas innerJoin Socios)
+                .select { condicion }
+                .orderBy(Cuotas.fechaVencimiento to SortOrder.ASC)
+                .toList()
+
+            println("🔢 Cantidad de cuotas encontradas: ${resultados.size}")
+
+            resultados
+                .drop((page - 1) * pageSize)
+                .take(pageSize)
+                .map {
+                    CuotaDTO(
+                        cuotaId = it[Cuotas.cuotaId],
+                        socioId = it[Socios.socioId],
+                        nombreSocio = "${it[Socios.nombre]} ${it[Socios.apellido]}",
+                        dni = it[Socios.dni],
+                        monto = it[Cuotas.monto].toDouble(),
+                        fechaVencimiento = it[Cuotas.fechaVencimiento],
+                        estado = it[Cuotas.estado],
+                        direccionSocio = it[Socios.direccion] ?: "",
+                        telefonoSocio = it[Socios.telefono]
+                    )
+                }
+        }
     }
 
-}
+
     override fun actualizarCuotasNoPagadas(tipoPeñaId: Int, nuevoMonto: BigDecimal) {
         transaction {
             Cuotas.update({
