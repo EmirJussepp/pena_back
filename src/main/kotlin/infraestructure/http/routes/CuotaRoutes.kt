@@ -194,20 +194,29 @@ fun Application.cuotaRoutes(
             }
             get("/cuotas-vencidas") {
                 val cobradorId = call.request.queryParameters["cobradorId"]?.toIntOrNull()
-                val mes = call.request.queryParameters["mes"]?.toIntOrNull()
-                val anio = call.request.queryParameters["anio"]?.toIntOrNull()
-                val dni = call.request.queryParameters["dni"]
-                val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
-                val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 20
+                val mes        = call.request.queryParameters["mes"]?.toIntOrNull()
+                val anio       = call.request.queryParameters["anio"]?.toIntOrNull()
+                val dni        = call.request.queryParameters["dni"]
+                val page       = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
+                val pageSize   = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 20
 
                 if (cobradorId == null) {
                     call.respond(HttpStatusCode.BadRequest, "Falta el ID del cobrador")
                     return@get
                 }
 
-                val cuotas = cuotaRepository.obtenerCuotasVencidasPorCobrador(cobradorId, mes, anio, dni, page, pageSize)
-                call.respond(HttpStatusCode.OK, cuotas)
+                val items = cuotaRepository.obtenerCuotasVencidasPorCobrador(
+                    cobradorId = cobradorId,
+                    mes = mes,
+                    anio = anio,
+                    dni = dni,
+                    page = page,
+                    pageSize = pageSize
+                )
+
+                call.respond(HttpStatusCode.OK, items)
             }
+
 
 
         }

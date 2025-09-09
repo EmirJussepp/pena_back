@@ -188,34 +188,53 @@ override fun existeCuotaEnMes(socioId: Int, mes: Int, anio: Int): Boolean = tran
                 condicion = condicion and (Socios.dni eq dni)
             }
 
-            println("⚙️ Filtros aplicados => cobradorId: $cobradorId, mes: $mes, año: $anio, dni: $dni")
+            println("⚙️ Filtros => cobradorId: $cobradorId, mes: $mes, año: $anio, dni: $dni")
             println("📜 Condición Exposed: $condicion")
 
-            val resultados = (Cuotas innerJoin Socios)
+            val offset = ((page - 1).coerceAtLeast(0) * pageSize).toLong()
+
+            // Base query con slice para no traer columnas innecesarias
+            val base = (Cuotas innerJoin Socios)
+                .slice(
+                    Cuotas.cuotaId,
+                    Socios.socioId,
+                    Socios.nombre,
+                    Socios.apellido,
+                    Socios.dni,
+                    Cuotas.monto,
+                    Cuotas.fechaVencimiento,
+                    Cuotas.estado,
+                    Socios.direccion,
+                    Socios.telefono
+                )
                 .select { condicion }
+
+            // (opcional) total para debug o paginación en el controlador/respuesta
+            val total = base.count()
+            println("🔢 Total cuotas (sin paginar): $total")
+
+            // Página actual desde la DB
+            val filas = base
                 .orderBy(Cuotas.fechaVencimiento to SortOrder.ASC)
+                .limit(pageSize, offset)
                 .toList()
 
-            println("🔢 Cantidad de cuotas encontradas: ${resultados.size}")
-
-            resultados
-                .drop((page - 1) * pageSize)
-                .take(pageSize)
-                .map {
-                    CuotaDTO(
-                        cuotaId = it[Cuotas.cuotaId],
-                        socioId = it[Socios.socioId],
-                        nombreSocio = "${it[Socios.nombre]} ${it[Socios.apellido]}",
-                        dni = it[Socios.dni],
-                        monto = it[Cuotas.monto].toDouble(),
-                        fechaVencimiento = it[Cuotas.fechaVencimiento],
-                        estado = it[Cuotas.estado],
-                        direccionSocio = it[Socios.direccion] ?: "",
-                        telefonoSocio = it[Socios.telefono]
-                    )
-                }
+            filas.map {
+                CuotaDTO(
+                    cuotaId = it[Cuotas.cuotaId],
+                    socioId = it[Socios.socioId],
+                    nombreSocio = "${it[Socios.nombre]} ${it[Socios.apellido]}",
+                    dni = it[Socios.dni],
+                    monto = it[Cuotas.monto].toDouble(),
+                    fechaVencimiento = it[Cuotas.fechaVencimiento],
+                    estado = it[Cuotas.estado],
+                    direccionSocio = it[Socios.direccion] ?: "",
+                    telefonoSocio = it[Socios.telefono]
+                )
+            }
         }
     }
+
 
 
     override fun actualizarCuotasNoPagadas(tipoPeñaId: Int, nuevoMonto: BigDecimal) {

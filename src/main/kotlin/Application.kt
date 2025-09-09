@@ -27,6 +27,7 @@ fun Application.module() {
                 serializersModule = SerializersModule {
                     contextual(BigDecimal::class, BigDecimalSerializer)
                 }
+
             }
         )
     }

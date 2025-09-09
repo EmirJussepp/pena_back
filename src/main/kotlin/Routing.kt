@@ -7,10 +7,11 @@ import com.example.application.commandhandler.Movimientos.MovimientoCommandHandl
 import com.example.application.commandhandler.pagos.CrearPagoCommandHandler
 import com.example.infraestructure.http.routes.*
 import com.example.infraestructure.persistence.*
-
+import com.example.repository.ReportesRepository
 
 
 import com.example.routes.cuotaRoutes
+import com.example.routes.reportes
 import io.ktor.http.*
 
 import io.ktor.server.application.*
@@ -34,10 +35,10 @@ fun Application.configureRouting() {
 
 // Primero creamos socioRepository, pasando una lambda que retorna la instancia de beneficioRepository que aún no está inicializada
     val socioRepository = SocioRepository(database) { beneficioRepository}
-
+val reportesRepository= ReportesRepository(database)
 // Ahora inicializamos beneficioRepository con socioRepository ya creado
     beneficioRepository = BeneficioRepository(database, socioRepository)
-
+    reportes(reportesRepository, database)
 // Luego continuás con el resto
     val pagoRepository = PagoRepository(database)
 //    val userRepository = UserRepository(database)
