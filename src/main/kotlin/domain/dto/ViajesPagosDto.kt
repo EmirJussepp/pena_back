@@ -1,5 +1,6 @@
 package com.example.domain.dto
 
+
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -15,4 +16,14 @@ data class ViajePagoFullDTO(
     val cobradorId: Int,
     val cobradorNombre: String,
 //    val cobradorApellido: String
+)
+
+@Serializable
+data class PaginacionViajePagoDTO(
+    val pasajeros: List<ViajePagoFullDTO>,
+    val total: Long,
+    val page: Int,
+    val pageSize: Int,
+    val totalMonto: Double,
+    val totalPasajeros: Int
 )

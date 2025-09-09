@@ -44,31 +44,48 @@ fun Application.viajeBomboneraRoutes() {
                 call.respond(HttpStatusCode.BadRequest, "Error: ${e.message}")
             }
         }
-        get("viajeBombonera"){
 
-                try {
-                    val viajesBombonera = viajeBomboneraRepository.findAll()
-                    call.respond(viajesBombonera)
-                } catch (e: Exception) {
-                    println("❌ Error al obtener viaje: ${e.message}")
-                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener viaje"))
-                }
-
-        }
+//        get("/viajeBomboneraFiltro") {
+//            val filtro = call.request.queryParameters["filtro"]
+//            val mes = call.request.queryParameters["mes"]
+//            val pagina = call.request.queryParameters["pagina"]?.toIntOrNull() ?: 1
+//            val tamanio = call.request.queryParameters["tamanioPagina"]?.toIntOrNull() ?: 3
+//
+//            val viajes = viajeBomboneraRepository.buscarViajes(filtro, mes, pagina, tamanio)
+//            val total = viajeBomboneraRepository.contarViajes(filtro, mes)
+//
+//            val dtoList = viajes.map { v ->
+//                ViajeBomboneraDto(
+//                    viajeBomboneraId = v.viajeBomboneraId,
+//                    fechaViaje = v.fechaViaje.toString(), // formatear si necesitas
+//                    destino = v.destino
+//                )
+//            }
+//
+//            call.respond(
+//                ViajeBomboneraFiltroResponse(
+//                    viajes = dtoList,
+//                    total = total
+//                )
+//            )
+//        }
         get("/viajeBomboneraFiltro") {
             val filtro = call.request.queryParameters["filtro"]
-            val mes = call.request.queryParameters["mes"]
+            val mes = call.request.queryParameters["mes"]?.toIntOrNull()
             val pagina = call.request.queryParameters["pagina"]?.toIntOrNull() ?: 1
             val tamanio = call.request.queryParameters["tamanioPagina"]?.toIntOrNull() ?: 3
 
-            val viajes = viajeBomboneraRepository.buscarViajes(filtro, mes, pagina, tamanio)
-            val total = viajeBomboneraRepository.contarViajes(filtro, mes)
+            // Esto debe traer viajes con los totales de pasajeros y monto
+            val viajes = viajeBomboneraRepository.buscarViajesConTotales(filtro, mes, pagina, tamanio)
+            val total = viajeBomboneraRepository.contarViajes(filtro, mes.toString())
 
             val dtoList = viajes.map { v ->
                 ViajeBomboneraDto(
                     viajeBomboneraId = v.viajeBomboneraId,
-                    fechaViaje = v.fechaViaje.toString(), // formatear si necesitas
-                    destino = v.destino
+                    fechaViaje = v.fechaViaje,
+                    destino = v.destino,
+                    totalPasajeros = v.totalPasajeros,
+                    totalMonto = v.totalMonto
                 )
             }
 
@@ -79,6 +96,7 @@ fun Application.viajeBomboneraRoutes() {
                 )
             )
         }
+
         patch("/viajesBombonera/{id}") {
             val id = call.parameters["id"]?.toIntOrNull()
                 ?: return@patch call.respond(HttpStatusCode.BadRequest, "ID inválido")
@@ -94,6 +112,17 @@ fun Application.viajeBomboneraRoutes() {
                 call.respond(HttpStatusCode.InternalServerError, "Error al actualizar viaje")
             }
         }
+//        get("viajeBombonera"){
+//
+//            try {
+//                val viajesBombonera = viajeBomboneraRepository.findAll()
+//                call.respond(viajesBombonera)
+//            } catch (e: Exception) {
+//                println("❌ Error al obtener viaje: ${e.message}")
+//                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener viaje"))
+//            }
+//
+//        }
 
 
 
