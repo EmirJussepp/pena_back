@@ -11,7 +11,7 @@ import com.example.repository.ReportesRepository
 
 
 import com.example.routes.cuotaRoutes
-import com.example.routes.reportes
+import com.example.infraestructure.http.routes.reportes
 import io.ktor.http.*
 
 import io.ktor.server.application.*
