@@ -1,12 +1,10 @@
+// src/main/kotlin/Monitoring.kt
 package com.example
 
-
 import io.ktor.server.application.*
-import io.ktor.server.plugins.calllogging.*
-
+import io.ktor.server.plugins.callloging.*  // <- ojo: callloging (no "calllogging")
 import io.ktor.server.request.*
-
-import org.slf4j.event.*
+import org.slf4j.event.Level
 
 fun Application.configureMonitoring() {
     install(CallLogging) {

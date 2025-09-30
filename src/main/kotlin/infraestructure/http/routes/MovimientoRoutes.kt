@@ -1,3 +1,4 @@
+// src/main/kotlin/com/example/infraestructure/http/routes/MovimientoRoutes.kt
 package com.example.infraestructure.http.routes
 
 import com.example.application.command.Movimientos.CrearMovimientoCommand
@@ -17,14 +18,11 @@ import io.ktor.server.routing.*
 import java.time.LocalDate
 import java.time.YearMonth
 
-fun Application.movimientoRoutes(
+fun Route.movimientoRoutes(
     movimientoRepository: MovimientoContract,
     movimientoCommandHandler: MovimientoCommandHandler
 ) {
-    routing {
-        authenticate ("auth-jwt"){
-
-
+    authenticate("auth-jwt") {
 
         // Crear un nuevo movimiento
         post("/movimientos") {
@@ -88,12 +86,13 @@ fun Application.movimientoRoutes(
             }
         }
 
+        // Eliminar (lógico) un movimiento
         delete("/movimientos/{id}") {
             if (!requirePerm(call, "movimientos:gestionar")) return@delete
             val id = call.parameters["id"]?.toIntOrNull()
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
 
-            // Ejemplo: obtener userId del header o principal (ajustar según tu auth)
+            // Ejemplo: obtener userId del header (ajusta según tu auth real)
             val userId = call.request.headers["X-User-Id"]?.toIntOrNull()
                 ?: return@delete call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "Usuario no autenticado"))
 
@@ -105,8 +104,7 @@ fun Application.movimientoRoutes(
             }
         }
 
-
-
+        // Balance total
         get("/balance") {
             if (!requireAny(call, "movimientos:ver", "movimientos:gestionar")) return@get
             try {
@@ -118,6 +116,7 @@ fun Application.movimientoRoutes(
             }
         }
 
+        // Balance semanal
         get("/balance/semanal") {
             if (!requireAny(call, "movimientos:ver", "movimientos:gestionar")) return@get
             try {
@@ -133,7 +132,8 @@ fun Application.movimientoRoutes(
                 val hasta = LocalDate.parse(hastaStr)
 
                 val movimientos = movimientoRepository.findMovimientosPorRango(desde, hasta)
-                val (balanceTotal, totalEfectivo, totalTransferencia) = movimientoRepository.calcularBalanceSemanal(desde, hasta)
+                val (balanceTotal, totalEfectivo, totalTransferencia) =
+                    movimientoRepository.calcularBalanceSemanal(desde, hasta)
 
                 val response = BalanceSemanalResponse(
                     movimientos = movimientos,
@@ -149,6 +149,7 @@ fun Application.movimientoRoutes(
             }
         }
 
+        // Balance mensual
         get("/balance/mensual") {
             if (!requireAny(call, "movimientos:ver", "movimientos:gestionar")) return@get
             try {
@@ -157,11 +158,13 @@ fun Application.movimientoRoutes(
                     call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Parámetro 'mes' requerido"))
                     return@get
                 }
+
                 val yearMonth = YearMonth.parse(mesParam)
                 val movimientos = movimientoRepository.findMovimientosPorMes(yearMonth)
-                val (balanceTotal, totalEfectivo, totalTransferencia) = movimientoRepository.calcularBalanceMensual(yearMonth)
+                val (balanceTotal, totalEfectivo, totalTransferencia) =
+                    movimientoRepository.calcularBalanceMensual(yearMonth)
 
-                val balanceDouble = balanceTotal.toDouble() // o lo que quieras para balance
+                val balanceDouble = balanceTotal.toDouble()
 
                 val response = BalanceResponse(
                     balance = balanceDouble,
@@ -176,24 +179,5 @@ fun Application.movimientoRoutes(
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al calcular balance mensual"))
             }
         }
-
-        }
-
-
     }
 }
-
-
-
-//        // Eliminar un movimiento
-//        delete("/movimientos/{id}") {
-//            val id = call.parameters["id"]?.toIntOrNull()
-//                ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
-//
-//            val eliminado = movimientoRepository.eliminarPorId(id)
-//            if (eliminado) {
-//                call.respond(HttpStatusCode.OK, mapOf("message" to "Movimiento eliminado"))
-//            } else {
-//                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Movimiento no encontrado"))
-//            }
-//        }

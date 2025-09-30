@@ -1,11 +1,9 @@
+// src/main/kotlin/com/example/infraestructure/http/routes/AlquileresSalonesRoutes.kt
 package com.example.infraestructure.http.routes
-
-
 
 import com.example.application.command.AlquilerSalon.ActualizarAlquilerCommand
 import com.example.application.command.AlquilerSalon.CreateAlquilerSalonCommand
 import com.example.application.commandhandler.AlquilerSalon.ActualizarAlquilerSalonHandler
-
 import com.example.application.commandhandler.AlquilerSalon.CreateAlquilerSalonHandler
 import com.example.infraestructure.persistence.AlquilerSalonesRepository
 import com.example.infraestructure.persistence.connectToMySql
@@ -16,55 +14,51 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.jetbrains.exposed.sql.Database
 
-fun Application.alquileresSalonesRoutes() {
-    val database: Database = connectToMySql() ?: error("Error al conectar a la base de datos MySQL")
+fun Route.alquileresSalonesRoutes() {
+    // ✔️ Tomamos la Application desde la Route
+    val database: Database = application.connectToMySql()
+        ?: error("Error al conectar a la base de datos MySQL")
+
     val alquilerRepository = AlquilerSalonesRepository(database)
     val alquilerCommandHandler = CreateAlquilerSalonHandler(alquilerRepository)
 
-    routing {
-        post("/alquileres") {
+    route("/alquileres") {
+
+        post {
             try {
                 val body = call.receive<CreateAlquilerSalonCommand>()
-
-                // Log para verificar el cuerpo recibido
                 println("📥 Recibido: $body")
-
                 alquilerCommandHandler.handle(body)
-
-                // Log para confirmar la inserción
                 println("✅ Alquiler registrado correctamente")
-
                 call.respond(HttpStatusCode.Created, mapOf("message" to "Alquiler registrado exitosamente"))
             } catch (e: IllegalArgumentException) {
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
             } catch (e: Exception) {
-                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
                 println("❌ Error: ${e.message}")
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
         }
 
-        get("/alquileres") {
+        get {
             try {
                 val alquileres = alquilerRepository.findAll()
-
-                // Log para depuración
                 println("📤 Enviando lista de alquileres: $alquileres")
-
                 call.respond(HttpStatusCode.OK, alquileres)
             } catch (e: Exception) {
-                e.printStackTrace()  // Esto imprime el stacktrace completo en consola
+                e.printStackTrace()
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
-
         }
-        delete("/alquileres/{id}") {
+
+        delete("{id}") {
             val id = call.parameters["id"]?.toIntOrNull()
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, "ID inválido")
 
             alquilerRepository.eliminarPorId(id)
             call.respond(HttpStatusCode.OK, "Alquiler eliminado con éxito")
         }
-        patch("/alquileres/{id}") {
+
+        patch("{id}") {
             try {
                 val id = call.parameters["id"]?.toIntOrNull()
                     ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
@@ -85,17 +79,8 @@ fun Application.alquileresSalonesRoutes() {
                 call.respond(HttpStatusCode.BadRequest, mapOf("mensaje" to e.message))
             } catch (e: Exception) {
                 e.printStackTrace()
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Error interno al actualizar alquiler")
-                )
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error interno al actualizar alquiler"))
             }
-
-
         }
     }
-
-
-
 }
-

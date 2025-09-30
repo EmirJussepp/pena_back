@@ -1,86 +1,72 @@
-
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.ktor)
-    alias(libs.plugins.kotlin.plugin.serialization)
+    kotlin("jvm") version "1.9.24"
+    application
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+    kotlin("plugin.serialization") version "1.9.24"
 }
 
 group = "com.example"
 version = "0.0.1"
 
 application {
-
-    mainClass = "io.ktor.server.netty.EngineMain"
-
-
-    mainClass.set("io.ktor.server.netty.EngineMain") // Correcto para Ktor
-
-    val isDevelopment: Boolean = project.ext.has("development")
+    // EngineMain + application.conf/application.yaml
+    mainClass.set("io.ktor.server.netty.EngineMain")
+    val isDevelopment: Boolean = project.hasProperty("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
-repositories {
-    mavenCentral()
-}
+repositories { mavenCentral() }
 
 java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(20)) // Usa Java 21 para compilar
-    }
+    toolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
 }
 
-
 dependencies {
-    implementation(libs.ktor.server.cors)
-    implementation(libs.ktor.server.core)
-    implementation(libs.ktor.server.auth)
-    implementation(libs.ktor.server.call.logging)
-    implementation(libs.ktor.server.host.common)
-    implementation(libs.ktor.server.status.pages)
-    implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.ktor.serialization.gson)
-    implementation(libs.ktor.serialization.kotlinx.json)
-    implementation("io.ktor:ktor-server-netty:3.1.1")
+    // ---- Ktor 2.3.12 alineado por BOM ----
+    implementation(platform("io.ktor:ktor-bom:2.3.12"))
+    implementation("io.ktor:ktor-server-core")
+    implementation("io.ktor:ktor-server-netty")
+    implementation("io.ktor:ktor-server-cors")
+    implementation("io.ktor:ktor-server-auth")
+    implementation("io.ktor:ktor-server-auth-jwt")
+    implementation("io.ktor:ktor-server-status-pages")
+    implementation("io.ktor:ktor-server-content-negotiation")
+    implementation("io.ktor:ktor-serialization-kotlinx-json")
+    implementation("io.ktor:ktor-server-call-logging")
+    implementation("io.ktor:ktor-server-config-yaml") // si usás application.yaml
+
+    // Logging
+    implementation("ch.qos.logback:logback-classic:1.5.12")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
 
 
-    implementation(libs.logback.classic)
-    implementation(libs.ktor.server.config.yaml)
-    implementation("io.ktor:ktor-server-config-yaml")
-    testImplementation(libs.ktor.server.test.host)
-    testImplementation(libs.kotlin.test.junit)
+
+    // DB
+    implementation("com.zaxxer:HikariCP:5.1.0")
+    implementation("mysql:mysql-connector-java:8.0.33")
+
+    // Exposed (mantengo versión que ya usabas)
     implementation("org.jetbrains.exposed:exposed-core:0.43.0")
     implementation("org.jetbrains.exposed:exposed-dao:0.43.0")
     implementation("org.jetbrains.exposed:exposed-jdbc:0.43.0")
-    implementation("io.ktor:ktor-server-core:2.0.0")  // Asegúrate de usar la última versión estable
-    implementation("io.ktor:ktor-server-netty:2.0.0")
-    implementation("io.ktor:ktor-client-core:2.0.0")
-    implementation("io.ktor:ktor-client-cio:2.0.0")
+    implementation("org.jetbrains.exposed:exposed-java-time:0.43.0")
 
-    implementation("mysql:mysql-connector-java:8.0.33") // Conector de MySQL
-    implementation("org.jetbrains.exposed:exposed-java-time:0.41.1")// or the latest version
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.4.0")
-    implementation("mysql:mysql-connector-java:8.0.33")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.2.4")  // Verifica la versión más reciente
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+
+
+    // Utils
     implementation("org.mindrot:jbcrypt:0.4")
     implementation("at.favre.lib:bcrypt:0.10.2")
-    implementation("io.ktor:ktor-server-auth:2.3.12")
-    implementation("io.ktor:ktor-server-auth-jwt:2.3.12")
-    implementation("com.auth0:java-jwt:4.4.0")
 
-
+    testImplementation(kotlin("test"))
 }
 
-// Configura el archivo JAR para incluir el Main-Class
-tasks.jar {
-    manifest {
-        attributes(
-            "Main-Class" to "io.ktor.server.netty.EngineMain"
-        )
+tasks {
+    shadowJar {
+        archiveBaseName.set("app")
+        archiveClassifier.set("")
+        archiveVersion.set("")
+        mergeServiceFiles()
     }
-
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE // Excluir archivos duplicados
-
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
-
 }

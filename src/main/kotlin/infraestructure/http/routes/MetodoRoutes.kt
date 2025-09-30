@@ -1,5 +1,5 @@
+// src/main/kotlin/com/example/infraestructure/http/routes/MetodoPagoRoutes.kt
 package com.example.infraestructure.http.routes
-
 
 import com.example.application.command.metodoPago.CreateMetodoPagoCommand
 import com.example.application.commandhandler.metodoPago.CreateMetodoPagoHandler
@@ -12,40 +12,44 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.jetbrains.exposed.sql.Database
 
-fun Application.metodoPagoRoutes() {
-    val database: Database = connectToMySql() ?: error("Error connecting to MySQL database")
+fun Route.metodoPagoRoutes() {
+    val database: Database = application.connectToMySql()
+        ?: error("Error connecting to MySQL database")
+
     val metodoPagoRepository = MetodoPagoRepository(database)
     val createMetodoPagoHandler = CreateMetodoPagoHandler(metodoPagoRepository)
 
-    routing {
-        post("/metodos-pago") {
+    route("/metodos-pago") {
+
+        // POST /metodos-pago
+        post {
             try {
                 val body = call.receive<CreateMetodoPagoCommand>()
-
-                // Agrega un log para ver el cuerpo recibido
-                println("Recibido: $body")
+                println("📥 Recibido: $body")
 
                 createMetodoPagoHandler.handle(body)
-
-                // Agrega un log para confirmar la inserción
-                println("Método de pago insertado correctamente")
+                println("✅ Método de pago insertado correctamente")
 
                 call.respond(HttpStatusCode.Created, mapOf("message" to "Método de pago creado exitosamente"))
             } catch (e: IllegalArgumentException) {
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
             } catch (e: Exception) {
+                println("❌ Error: ${e.message}")
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
-                // Log para el error
-                println("Error: ${e.message}")
             }
         }
-        get("/metodopago"){
+
+        // GET /metodos-pago
+        get {
             try {
-                val metodo = metodoPagoRepository.findAll()
-                call.respond(metodo)
+                val metodos = metodoPagoRepository.findAll()
+                call.respond(HttpStatusCode.OK, metodos)
             } catch (e: Exception) {
-                println("❌ Error al obtener metodos de pago: ${e.message}")
-                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener metodo de pago"))
+                println("❌ Error al obtener métodos de pago: ${e.message}")
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to "Error al obtener métodos de pago")
+                )
             }
         }
     }
