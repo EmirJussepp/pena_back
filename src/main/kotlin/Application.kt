@@ -34,29 +34,49 @@ fun Application.module() {
         )
     }
 
-    // ---- Config DB: primero application.(yaml|conf), sino ENV, sino defaults ----
+    // ---- Config DB: PRIORIDAD -> MYSQL* (Railway) → DB_* → application.conf → defaults ----
     val cfg = environment.config
 
-    val url  = cfg.propertyOrNull("db.mysql.url")?.getString()
+    val mysqlHost = System.getenv("MYSQLHOST")
+        ?: cfg.propertyOrNull("db.mysql.host")?.getString()
+    val mysqlPort = System.getenv("MYSQLPORT")
+        ?: cfg.propertyOrNull("db.mysql.port")?.getString()
+        ?: "3306"
+    val mysqlDb   = System.getenv("MYSQLDATABASE")
+        ?: cfg.propertyOrNull("db.mysql.database")?.getString()
+        ?: "pena_socios"
+    val mysqlUser = System.getenv("MYSQLUSER")
+        ?: System.getenv("DB_USER")
+        ?: cfg.propertyOrNull("db.mysql.user")?.getString()
+        ?: "root"
+    val mysqlPass = System.getenv("MYSQLPASSWORD")
+        ?: System.getenv("DB_PASSWORD")
+        ?: cfg.propertyOrNull("db.mysql.password")?.getString()
+        ?: "UilCNIRSqusmCnTlnjXRzEmOsLQuIlIU"
+
+    // Si Railway nos dio host, armamos el JDBC con eso; si no, probamos DB_URL; si no, default local
+    val urlFromMysqlVars = mysqlHost?.let {
+        "jdbc:mysql://$it:$mysqlPort/$mysqlDb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&characterEncoding=UTF-8&useUnicode=true"
+    }
+
+    val url = urlFromMysqlVars
         ?: System.getenv("DB_URL")
+        ?: cfg.propertyOrNull("db.mysql.url")?.getString()
         ?: "jdbc:mysql://localhost:3306/pena_socios?useSSL=false&serverTimezone=UTC"
 
-    val user = cfg.propertyOrNull("db.mysql.user")?.getString()
-        ?: System.getenv("DB_USER") ?: "root"
-
-    val pass = cfg.propertyOrNull("db.mysql.password")?.getString()
-        ?: System.getenv("DB_PASSWORD") ?: "18122022"
-
-    val drv  = cfg.propertyOrNull("db.mysql.driver")?.getString()
-        ?: "com.mysql.cj.jdbc.Driver"
-
     // ---- DB singleton ----
-    val db = DatabaseProvider.init(url, user, pass, drv)
-    log.info("✅ Pool Hikari inicializado (una sola vez)")
+    val db = DatabaseProvider.init(
+        url  = url,
+        user = mysqlUser,
+        pass = mysqlPass,
+        driver = "com.mysql.cj.jdbc.Driver",
+        poolSize = 10
+    )
+    log.info("✅ Pool Hikari inicializado (host=${mysqlHost ?: "fallback"}, db=$mysqlDb)")
 
     // ---- Ktor plugins & app wiring ----
     configureSecurity()
-    configureDatabases(db)   // <- usa el DB ya inicializado (no crea nuevos pools)
+    configureDatabases(db)
     configureSerialization()
     configureRouting()
 }
