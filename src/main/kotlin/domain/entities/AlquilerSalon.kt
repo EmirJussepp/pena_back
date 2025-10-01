@@ -21,7 +21,7 @@ object AlquilerSalones : Table("alquileres_salones") {
     val condicion = bool("condicion")
     val metodoPagoId = integer("metodo_pago_id").references(metodosPago.metodoPagoId)
 
-    override val primaryKey = PrimaryKey(salonId)
+    override val primaryKey = PrimaryKey(alquilerId)
 }
 
 @Serializable
