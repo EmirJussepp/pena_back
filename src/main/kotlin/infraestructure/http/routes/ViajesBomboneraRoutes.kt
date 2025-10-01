@@ -8,39 +8,39 @@ import com.example.application.commandhandler.ViajesBombonera.ActualizarViajeBom
 import com.example.domain.dto.ViajeBomboneraDto
 import com.example.domain.dto.ViajeBomboneraFiltroResponse
 import com.example.infraestructure.persistence.ViajeBomboneraRepository
-import com.example.infraestructure.persistence.connectToMySql
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.sql.Database
 
-fun Route.viajeBomboneraRoutes() {
-    val database: Database = application.connectToMySql()
-        ?: error("Error connecting to MySQL database")
+/**
+ * Rutas de Viaje Bombonera recibiendo el repositorio ya inicializado.
+ * No abre conexiones ni usa connectToMySql.
+ */
+fun Route.viajeBomboneraRoutes(
+    viajeRepo: ViajeBomboneraRepository
+) {
+    val crearHandler      = ViajeBomboneraCommandHandler(viajeRepo)
+    val actualizarHandler = ActualizarViajeBomboneraHandler(viajeRepo)
 
-    val viajeRepo        = ViajeBomboneraRepository(database)
-    val crearHandler     = ViajeBomboneraCommandHandler(viajeRepo)
-    val actualizarHandler= ActualizarViajeBomboneraHandler(viajeRepo)
-
-    // Crear / actualizar un viaje
+    // POST /viajesBombonera  (crear)
     post("/viajesBombonera") {
         try {
             val cmd = call.receive<ViajeBomboneraCommand>()
-            println("Datos recibidos: $cmd")
-            cmd.validate() // si tu comando tiene validate()
+            // si tu comando tiene validate(), llamalo (dejará throw si no pasa)
+            // cmd.validate()
             val viajeGuardado = crearHandler.handle(cmd)
             call.respond(HttpStatusCode.Created, viajeGuardado)
         } catch (e: IllegalArgumentException) {
             call.respond(HttpStatusCode.BadRequest, e.message ?: "Datos inválidos")
         } catch (e: Exception) {
-            println("Error /viajesBombonera: ${e.message}")
+            call.application.log.error("Error en POST /viajesBombonera", e)
             call.respond(HttpStatusCode.InternalServerError, "Error en el servidor")
         }
     }
 
-    // Filtro + totales
+    // GET /viajeBomboneraFiltro?filtro=&mes=&pagina=&tamanioPagina=
     get("/viajeBomboneraFiltro") {
         val filtro  = call.request.queryParameters["filtro"]
         val mes     = call.request.queryParameters["mes"]?.toIntOrNull()
@@ -62,12 +62,12 @@ fun Route.viajeBomboneraRoutes() {
             }
             call.respond(ViajeBomboneraFiltroResponse(viajes = dtoList, total = total))
         } catch (e: Exception) {
-            println("Error /viajeBomboneraFiltro: ${e.message}")
+            call.application.log.error("Error en GET /viajeBomboneraFiltro", e)
             call.respond(HttpStatusCode.InternalServerError, "Error al obtener viajes")
         }
     }
 
-    // Actualizar viaje
+    // PATCH /viajesBombonera/{id}  (actualizar)
     patch("/viajesBombonera/{id}") {
         val id = call.parameters["id"]?.toIntOrNull()
             ?: return@patch call.respond(HttpStatusCode.BadRequest, "ID inválido")
@@ -78,6 +78,7 @@ fun Route.viajeBomboneraRoutes() {
         } catch (e: IllegalArgumentException) {
             call.respond(HttpStatusCode.NotFound, e.message ?: "Viaje no encontrado")
         } catch (e: Exception) {
+            call.application.log.error("Error en PATCH /viajesBombonera/$id", e)
             call.respond(HttpStatusCode.InternalServerError, "Error al actualizar viaje")
         }
     }

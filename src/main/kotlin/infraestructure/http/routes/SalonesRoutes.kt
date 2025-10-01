@@ -1,24 +1,24 @@
 // src/main/kotlin/com/example/infraestructure/http/routes/SalonesRoutes.kt
 package com.example.infraestructure.http.routes
 
-import com.example.application.command.Salones.ActualzarSalones
+import com.example.application.command.Salones.ActualzarSalones // <- ¿tal vez ActualizarSalones?
 import com.example.application.command.Salones.CreateSalonCommand
 import com.example.application.commandhandler.Salones.ActualizarSalonesHandler
 import com.example.application.commandhandler.Salones.SalonCommandHandler
 import com.example.infraestructure.persistence.SalonesRepository
-import com.example.infraestructure.persistence.connectToMySql
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.sql.Database
 
-fun Route.salonesRoutes() {
-    val database: Database = application.connectToMySql()
-        ?: error("Error connecting to MySQL database")
-
-    val salonRepository = SalonesRepository(database)
+/**
+ * Rutas de salones recibiendo el repositorio ya inicializado.
+ * No abre conexiones ni usa connectToMySql.
+ */
+fun Route.salonesRoutes(
+    salonRepository: SalonesRepository
+) {
     val salonCommandHandler = SalonCommandHandler(salonRepository)
 
     route("/salones") {
@@ -27,16 +27,12 @@ fun Route.salonesRoutes() {
         post {
             try {
                 val body = call.receive<CreateSalonCommand>()
-                println("📥 Recibido: $body")
-
                 salonCommandHandler.handle(body)
-                println("✅ Salón creado correctamente")
-
                 call.respond(HttpStatusCode.Created, mapOf("message" to "Salón creado exitosamente"))
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
             } catch (e: Exception) {
-                println("❌ Error: ${e.message}")
+                call.application.log.error("Error creando salón", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
         }
@@ -45,14 +41,10 @@ fun Route.salonesRoutes() {
         get {
             try {
                 val salones = salonRepository.findAll()
-                println("📤 Enviando lista de salones: $salones")
                 call.respond(HttpStatusCode.OK, salones)
             } catch (e: Exception) {
-                println("❌ Error al obtener salones: ${e.message}")
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "No se pudo obtener la lista de salones")
-                )
+                call.application.log.error("Error obteniendo salones", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "No se pudo obtener la lista de salones"))
             }
         }
 
@@ -63,16 +55,13 @@ fun Route.salonesRoutes() {
                     ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
 
                 val existente = salonRepository.findById(id)
-                    ?: return@delete call.respond(
-                        HttpStatusCode.NotFound,
-                        mapOf("error" to "No existe Salon con id $id")
-                    )
+                    ?: return@delete call.respond(HttpStatusCode.NotFound, mapOf("error" to "No existe salón con id $id"))
 
                 salonRepository.delete(id)
-                call.respond(HttpStatusCode.OK, mapOf("message" to "Salon eliminado con éxito"))
+                call.respond(HttpStatusCode.OK, mapOf("message" to "Salón eliminado con éxito"))
             } catch (e: Exception) {
-                println("❌ Error al eliminar: ${e.message}")
-                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al eliminar Salon"))
+                call.application.log.error("Error eliminando salón", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al eliminar salón"))
             }
         }
 
@@ -82,15 +71,15 @@ fun Route.salonesRoutes() {
                 val id = call.parameters["id"]?.toIntOrNull()
                     ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
 
-                val datos = call.receive<ActualzarSalones>()
+                val datos = call.receive<ActualzarSalones>() // si el DTO correcto es ActualizarSalones, cambialo aquí
                 val handler = ActualizarSalonesHandler(salonRepository)
                 handler.handle(id, datos)
 
-                call.respond(HttpStatusCode.OK, mapOf("message" to "Salon actualizado con éxito"))
+                call.respond(HttpStatusCode.OK, mapOf("message" to "Salón actualizado con éxito"))
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
             } catch (e: Exception) {
-                println("❌ Error: ${e.message}")
+                call.application.log.error("Error actualizando salón", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error interno al actualizar"))
             }
         }

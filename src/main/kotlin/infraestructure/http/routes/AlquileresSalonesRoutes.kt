@@ -6,35 +6,32 @@ import com.example.application.command.AlquilerSalon.CreateAlquilerSalonCommand
 import com.example.application.commandhandler.AlquilerSalon.ActualizarAlquilerSalonHandler
 import com.example.application.commandhandler.AlquilerSalon.CreateAlquilerSalonHandler
 import com.example.infraestructure.persistence.AlquilerSalonesRepository
-import com.example.infraestructure.persistence.connectToMySql
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.sql.Database
 
-fun Route.alquileresSalonesRoutes() {
-    // ✔️ Tomamos la Application desde la Route
-    val database: Database = application.connectToMySql()
-        ?: error("Error al conectar a la base de datos MySQL")
-
-    val alquilerRepository = AlquilerSalonesRepository(database)
-    val alquilerCommandHandler = CreateAlquilerSalonHandler(alquilerRepository)
+/**
+ * Define las rutas de alquileres **recibiendo** el repositorio ya inicializado.
+ * No abre conexiones nuevas ni usa connectToMySql.
+ */
+fun Route.alquileresSalonesRoutes(
+    alquilerRepository: AlquilerSalonesRepository
+) {
+    val crearHandler = CreateAlquilerSalonHandler(alquilerRepository)
 
     route("/alquileres") {
 
         post {
             try {
                 val body = call.receive<CreateAlquilerSalonCommand>()
-                println("📥 Recibido: $body")
-                alquilerCommandHandler.handle(body)
-                println("✅ Alquiler registrado correctamente")
+                crearHandler.handle(body)
                 call.respond(HttpStatusCode.Created, mapOf("message" to "Alquiler registrado exitosamente"))
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
             } catch (e: Exception) {
-                println("❌ Error: ${e.message}")
+                call.application.log.error("Error creando alquiler", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
         }
@@ -42,20 +39,24 @@ fun Route.alquileresSalonesRoutes() {
         get {
             try {
                 val alquileres = alquilerRepository.findAll()
-                println("📤 Enviando lista de alquileres: $alquileres")
                 call.respond(HttpStatusCode.OK, alquileres)
             } catch (e: Exception) {
-                e.printStackTrace()
+                call.application.log.error("Error listando alquileres", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
         }
 
         delete("{id}") {
             val id = call.parameters["id"]?.toIntOrNull()
-                ?: return@delete call.respond(HttpStatusCode.BadRequest, "ID inválido")
+                ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
 
-            alquilerRepository.eliminarPorId(id)
-            call.respond(HttpStatusCode.OK, "Alquiler eliminado con éxito")
+            try {
+                alquilerRepository.eliminarPorId(id)
+                call.respond(HttpStatusCode.OK, mapOf("message" to "Alquiler eliminado con éxito"))
+            } catch (e: Exception) {
+                call.application.log.error("Error eliminando alquiler $id", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
+            }
         }
 
         patch("{id}") {
@@ -64,21 +65,19 @@ fun Route.alquileresSalonesRoutes() {
                     ?: return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
 
                 val datos = call.receive<ActualizarAlquilerCommand>()
-                println("Actualizar alquiler - ID URL: $id")
-                println("Datos recibidos: $datos")
 
                 if (datos.alquilerId != id) {
                     return@patch call.respond(HttpStatusCode.BadRequest, mapOf("error" to "El ID no coincide"))
                 }
 
-                val handler = ActualizarAlquilerSalonHandler(alquilerRepository)
-                handler.handle(datos)
+                val actualizarHandler = ActualizarAlquilerSalonHandler(alquilerRepository)
+                actualizarHandler.handle(datos)
 
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Alquiler actualizado correctamente"))
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("mensaje" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
             } catch (e: Exception) {
-                e.printStackTrace()
+                call.application.log.error("Error actualizando alquiler", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error interno al actualizar alquiler"))
             }
         }

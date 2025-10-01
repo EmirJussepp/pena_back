@@ -19,20 +19,18 @@ import com.example.domain.dto.UserResponse
 import com.example.infraestructure.persistence.RolesRepository
 import com.example.infraestructure.persistence.UserRepository
 import com.example.infraestructure.persistence.UserRolesRepository
-import com.example.infraestructure.persistence.connectToMySql
-import org.jetbrains.exposed.sql.Database
 
-fun Route.userRoutes() {
-    val database: Database = application.connectToMySql()
-        ?: error("Error connecting to MySQL database")
-
-    val userRepository      = UserRepository(database)
-    val userRolesRepository = UserRolesRepository(database)
-    val rolesRepository     = RolesRepository(database)
-
-    val createUserHandler = CreateUserCommandHandler(userRepository, userRolesRepository, rolesRepository)
-    val updateUserHandler = UpdateUserCommandHandler(userRepository, rolesRepository, userRolesRepository)
-
+/**
+ * Rutas de usuarios recibiendo dependencias ya inicializadas.
+ * No abre conexiones ni usa connectToMySql.
+ */
+fun Route.userRoutes(
+    userRepository: UserRepository,
+    userRolesRepository: UserRolesRepository,
+    rolesRepository: RolesRepository,
+    createUserHandler: CreateUserCommandHandler = CreateUserCommandHandler(userRepository, userRolesRepository, rolesRepository),
+    updateUserHandler: UpdateUserCommandHandler = UpdateUserCommandHandler(userRepository, rolesRepository, userRolesRepository)
+) {
     authenticate("auth-jwt") {
         route("/usuarios") {
 
@@ -44,8 +42,9 @@ fun Route.userRoutes() {
                     createUserHandler.handle(body)
                     call.respond(HttpStatusCode.Created, mapOf("message" to "Usuario creado con roles"))
                 } catch (e: IllegalArgumentException) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
                 } catch (e: Exception) {
+                    call.application.log.error("Error creando usuario", e)
                     call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error interno del servidor"))
                 }
             }
@@ -60,11 +59,12 @@ fun Route.userRoutes() {
                             userId = user.userId,
                             name   = user.name,
                             email  = user.email,
-                            roles  = user.roles.map { it.name } // asegurate que sea el campo correcto
+                            roles  = user.roles.map { it.name } // ajustá si tu modelo usa otro campo
                         )
                     }
                     call.respond(HttpStatusCode.OK, response)
                 } catch (e: Exception) {
+                    call.application.log.error("Error listando usuarios", e)
                     call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "No se pudieron obtener los usuarios"))
                 }
             }
@@ -78,11 +78,11 @@ fun Route.userRoutes() {
 
                     val body = call.receive<UpdateUserCommand>()
                     updateUserHandler.handle(id, body)
-
                     call.respond(HttpStatusCode.OK, mapOf("message" to "Usuario actualizado correctamente"))
                 } catch (e: IllegalArgumentException) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                    call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
                 } catch (e: Exception) {
+                    call.application.log.error("Error actualizando usuario", e)
                     call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al actualizar usuario"))
                 }
             }
@@ -92,12 +92,13 @@ fun Route.userRoutes() {
                 if (!requirePerm(call, "usuarios:gestionar")) return@delete
                 val id = call.parameters["id"]?.toIntOrNull()
                     ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
-
-                val eliminado = userRepository.eliminarPorId(id)
-                if (eliminado) {
-                    call.respond(HttpStatusCode.OK, mapOf("message" to "Usuario eliminado correctamente"))
-                } else {
-                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "No se pudo eliminar el usuario"))
+                try {
+                    val eliminado = userRepository.eliminarPorId(id)
+                    if (eliminado) call.respond(HttpStatusCode.OK, mapOf("message" to "Usuario eliminado correctamente"))
+                    else           call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "No se pudo eliminar el usuario"))
+                } catch (e: Exception) {
+                    call.application.log.error("Error eliminando usuario", e)
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al eliminar usuario"))
                 }
             }
         }

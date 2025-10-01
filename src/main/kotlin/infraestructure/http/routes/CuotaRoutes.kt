@@ -1,5 +1,5 @@
 // src/main/kotlin/com/example/routes/CuotaRoutes.kt
-package com.example.routes
+package com.example.infraestructure.http.routes
 
 import com.example.application.Service.CuotaService
 import com.example.application.command.Cuota.CrearCuotaCommand
@@ -23,7 +23,6 @@ fun Route.cuotaRoutes(
     cuotaService: CuotaService,
     socioRepository: ISocioRepository
 ) {
-    // Grupo /cuotas
     route("/cuotas") {
 
         // POST /cuotas
@@ -33,8 +32,9 @@ fun Route.cuotaRoutes(
                 createCuotaHandler.handle(command)
                 call.respond(HttpStatusCode.Created, mapOf("message" to "Cuota creada exitosamente"))
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
             } catch (e: Exception) {
+                call.application.log.error("Error creando cuota", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
         }
@@ -45,32 +45,23 @@ fun Route.cuotaRoutes(
                 cuotaService.generarCuotasMensuales()
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Cuotas generadas exitosamente para todos los socios"))
             } catch (e: Exception) {
+                call.application.log.error("Error generando cuotas automáticas", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al generar las cuotas automáticas"))
             }
         }
 
-        // GET /cuotas
+        // GET /cuotas  (todas)
         get {
             try {
                 val cuotas = cuotaRepository.findAll()
                 call.respond(cuotas)
             } catch (e: Exception) {
+                call.application.log.error("Error obteniendo cuotas", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener cuotas"))
             }
         }
 
-        // GET /cuotas/{socioId}
-        get("{socioId}") {
-            val socioId = call.parameters["socioId"]?.toIntOrNull()
-                ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "socioId inválido"))
-
-            try {
-                val cuotas = cuotaRepository.findBySocioId(socioId)
-                call.respond(cuotas)
-            } catch (e: Exception) {
-                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al buscar cuotas"))
-            }
-        }
+        // ==== Rutas de pendientes primero para no ser “tapadas” por {socioId} ====
 
         // GET /cuotas/pendientes/{socioId}
         get("pendientes/{socioId}") {
@@ -79,22 +70,22 @@ fun Route.cuotaRoutes(
 
             try {
                 val pendientes = cuotaRepository.findPendientesPorSocio(socioId)
-                val totalAdeudado = pendientes.fold(BigDecimal.ZERO) { acc, cuota -> acc + cuota.monto }.toString()
+                val totalAdeudado = pendientes.fold(BigDecimal.ZERO) { acc, c -> acc + c.monto }.toString()
 
-                val cuotas = pendientes.map { cuota ->
+                val cuotas = pendientes.map { c ->
                     mapOf(
-                        "cuotaId" to cuota.cuotaId.toString(),
-                        "socioId" to cuota.socioId.toString(),
-                        "monto" to cuota.monto.toString(),
-                        "fechaPago" to (cuota.fechaEmision?.toString() ?: "No disponible"),
-                        "fechaVencimiento" to cuota.fechaVencimiento.toString(),
-                        "estado" to cuota.estado.toString()
+                        "cuotaId"          to c.cuotaId.toString(),
+                        "socioId"          to c.socioId.toString(),
+                        "monto"            to c.monto.toString(),
+                        "fechaPago"        to (c.fechaEmision?.toString() ?: "No disponible"),
+                        "fechaVencimiento" to c.fechaVencimiento.toString(),
+                        "estado"           to c.estado.toString()
                     )
                 }
 
-                val respuesta = RespuestaCuotas(cuotas, totalAdeudado, cuotas.size)
-                call.respond(respuesta)
+                call.respond(RespuestaCuotas(cuotas, totalAdeudado, cuotas.size))
             } catch (e: Exception) {
+                call.application.log.error("Error listando pendientes por socioId", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al buscar cuotas pendientes"))
             }
         }
@@ -108,29 +99,45 @@ fun Route.cuotaRoutes(
                 val socio = socioRepository.findByDni(dni)
                     ?: return@get call.respond(HttpStatusCode.NotFound, mapOf("error" to "Socio con DNI $dni no encontrado"))
 
-                val pendientes = cuotaRepository.findPendientesPorSocio(socio.socioId!!)
-                val totalAdeudado = pendientes.fold(BigDecimal.ZERO) { acc, cuota -> acc + cuota.monto }.toString()
+                val pendientes = cuotaRepository.findPendientesPorSocio(requireNotNull(socio.socioId))
+                val totalAdeudado = pendientes.fold(BigDecimal.ZERO) { acc, c -> acc + c.monto }.toString()
 
-                val cuotasFormateadas = pendientes.map { cuota ->
+                val cuotasFormateadas = pendientes.map { c ->
                     mapOf(
-                        "cuotaId" to cuota.cuotaId.toString(),
-                        "socioId" to cuota.socioId.toString(),
-                        "monto" to cuota.monto.toString(),
-                        "fechaPago" to (cuota.fechaEmision?.toString() ?: "No disponible"),
-                        "estado" to cuota.estado.toString()
+                        "cuotaId"          to c.cuotaId.toString(),
+                        "socioId"          to c.socioId.toString(),
+                        "monto"            to c.monto.toString(),
+                        "fechaPago"        to (c.fechaEmision?.toString() ?: "No disponible"),
+                        "fechaVencimiento" to c.fechaVencimiento.toString(),
+                        "estado"           to c.estado.toString()
                     )
                 }
 
-                val respuesta = RespuestaCuotas(
-                    cuotasPendientes = cuotasFormateadas,
-                    totalAdeudado = totalAdeudado,
-                    cantidadCuotasPendientes = cuotasFormateadas.size
+                call.respond(
+                    HttpStatusCode.OK,
+                    RespuestaCuotas(
+                        cuotasPendientes = cuotasFormateadas,
+                        totalAdeudado = totalAdeudado,
+                        cantidadCuotasPendientes = cuotasFormateadas.size
+                    )
                 )
-
-                call.respond(HttpStatusCode.OK, respuesta)
             } catch (e: Exception) {
-                println("❌ Error al buscar cuotas pendientes por DNI: ${e.message}")
+                call.application.log.error("Error listando pendientes por DNI", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al buscar cuotas pendientes"))
+            }
+        }
+
+        // ==== Por último, GET /cuotas/{socioId} ====
+        get("{socioId}") {
+            val socioId = call.parameters["socioId"]?.toIntOrNull()
+                ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "socioId inválido"))
+
+            try {
+                val cuotas = cuotaRepository.findBySocioId(socioId)
+                call.respond(cuotas)
+            } catch (e: Exception) {
+                call.application.log.error("Error buscando cuotas por socioId", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al buscar cuotas"))
             }
         }
 
@@ -140,13 +147,11 @@ fun Route.cuotaRoutes(
                 ?: return@put call.respond(HttpStatusCode.BadRequest, mapOf("error" to "cuotaId inválido"))
 
             try {
-                val result = cuotaRepository.marcarComoPagada(cuotaId)
-                if (result) {
-                    call.respond(HttpStatusCode.OK, mapOf("message" to "Cuota pagada correctamente"))
-                } else {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Cuota no encontrada"))
-                }
+                val ok = cuotaRepository.marcarComoPagada(cuotaId)
+                if (ok) call.respond(HttpStatusCode.OK, mapOf("message" to "Cuota pagada correctamente"))
+                else     call.respond(HttpStatusCode.NotFound, mapOf("error" to "Cuota no encontrada"))
             } catch (e: Exception) {
+                call.application.log.error("Error pagando cuota", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al pagar cuota"))
             }
         }
@@ -164,6 +169,7 @@ fun Route.cuotaRoutes(
                 val tieneCuota = cuotaRepository.existeCuotaEnMes(socioId, mesActual, anioActual)
                 call.respond(mapOf("tieneCuota" to tieneCuota))
             } catch (e: Exception) {
+                call.application.log.error("Error verificando cuota del mes", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al verificar cuota"))
             }
         }
@@ -172,26 +178,27 @@ fun Route.cuotaRoutes(
     // GET /cuotas-vencidas (fuera del grupo /cuotas)
     get("/cuotas-vencidas") {
         val cobradorId = call.request.queryParameters["cobradorId"]?.toIntOrNull()
-        val mes        = call.request.queryParameters["mes"]?.toIntOrNull()
-        val anio       = call.request.queryParameters["anio"]?.toIntOrNull()
-        val dni        = call.request.queryParameters["dni"]
-        val page       = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
-        val pageSize   = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 20
+            ?: return@get call.respond(HttpStatusCode.BadRequest, "Falta el ID del cobrador")
 
-        if (cobradorId == null) {
-            call.respond(HttpStatusCode.BadRequest, "Falta el ID del cobrador")
-            return@get
+        val mes      = call.request.queryParameters["mes"]?.toIntOrNull()
+        val anio     = call.request.queryParameters["anio"]?.toIntOrNull()
+        val dni      = call.request.queryParameters["dni"]
+        val page     = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
+        val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 20
+
+        try {
+            val items = cuotaRepository.obtenerCuotasVencidasPorCobrador(
+                cobradorId = cobradorId,
+                mes = mes,
+                anio = anio,
+                dni = dni,
+                page = page,
+                pageSize = pageSize
+            )
+            call.respond(HttpStatusCode.OK, items)
+        } catch (e: Exception) {
+            call.application.log.error("Error obteniendo cuotas vencidas", e)
+            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener cuotas vencidas"))
         }
-
-        val items = cuotaRepository.obtenerCuotasVencidasPorCobrador(
-            cobradorId = cobradorId,
-            mes = mes,
-            anio = anio,
-            dni = dni,
-            page = page,
-            pageSize = pageSize
-        )
-
-        call.respond(HttpStatusCode.OK, items)
     }
 }

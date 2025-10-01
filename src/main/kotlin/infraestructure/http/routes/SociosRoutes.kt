@@ -13,51 +13,25 @@ import com.example.domain.Mappers.mapearUpdateDTOaEntidad
 import com.example.domain.dto.SocioDTO
 import com.example.domain.dto.SocioUpdateDTO
 import com.example.domain.entities.SociosPage
-import com.example.infraestructure.persistence.*
+import com.example.domain.contracts.ISocioRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.sql.Database
 
-fun Route.socioRoutes() {
-    val database: Database = application.connectToMySql()
-        ?: error("Error connecting to MySQL database")
-
-    // Armado de repos y servicios (con la dependencia circular controlada)
-    lateinit var beneficioRepository: BeneficioRepository
-    val socioRepository = SocioRepository(database) { beneficioRepository }
-    val actSocioHandler = actualizarSocioHandler(socioRepository)
-    beneficioRepository = BeneficioRepository(database, socioRepository)
-
-    val cobradorRepository      = CobradorRepository(database)
-    val tipoSocioPenaRepository = SociosPeñaRepository(database)
-    val tipoBocaRepository      = TipoSocioBocaRepository(database)
-    val usuarioRepository       = UserRepository(database)
-    val localidadRepository     = LocalidadRepository(database)
-    val cuotaRepository         = CuotaRepository(database, beneficioRepository)
-
-    val cuotaService = CuotaService(
-        tipoSocioPenaRepository,
-        cuotaRepository,
-        socioRepository,
-        beneficioRepository
-    )
-
-    val createSocioHandler = CreateSocioHandler(
-        socioRepository,
-        localidadRepository,
-        tipoSocioPenaRepository,
-        tipoBocaRepository,
-        cobradorRepository,
-        usuarioRepository,
-        cuotaService
-    )
-
-    val obtenerSocioIdHandler = ObtenerSocioIdHandler(socioRepository)
-
+/**
+ * Rutas de socios recibiendo dependencias ya inicializadas.
+ * No abre conexiones ni crea repos/servicios aquí.
+ */
+fun Route.socioRoutes(
+    socioRepository: ISocioRepository,
+    createSocioHandler: CreateSocioHandler,
+    actSocioHandler: actualizarSocioHandler,
+    obtenerSocioIdHandler: ObtenerSocioIdHandler,
+    cuotaService: CuotaService
+) {
     authenticate("auth-jwt") {
 
         // Crear socio -> SOLO ADMIN (socios:gestionar)
@@ -67,9 +41,9 @@ fun Route.socioRoutes() {
                 val body = call.receive<CreateSocioCommand>()
                 val validationErrors = body.validate()
                 if (validationErrors.isNotEmpty()) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("errors" to validationErrors))
-                    return@post
+                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("errors" to validationErrors))
                 }
+
                 val socio = createSocioHandler.handle(body)
                 if (socio == null) {
                     call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "No se pudo crear el socio"))
@@ -77,9 +51,9 @@ fun Route.socioRoutes() {
                     call.respond(HttpStatusCode.Created, mapOf("message" to "Socio creado exitosamente"))
                 }
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("mensaje" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("mensaje" to (e.message ?: "Datos inválidos")))
             } catch (e: Exception) {
-                e.printStackTrace()
+                call.application.log.error("Error creando socio", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Ha ocurrido un error en el servidor"))
             }
         }
@@ -90,11 +64,13 @@ fun Route.socioRoutes() {
             val socioId = call.parameters["socio_id"]?.toIntOrNull()
                 ?: return@get call.respond(HttpStatusCode.BadRequest, "ID inválido")
 
-            val socio = obtenerSocioIdHandler.handle(ObtenerSocioIdQuery(socioId))
-            if (socio != null) {
-                call.respond(HttpStatusCode.OK, socio)
-            } else {
-                call.respond(HttpStatusCode.NotFound, "Socio no encontrado")
+            try {
+                val socio = obtenerSocioIdHandler.handle(ObtenerSocioIdQuery(socioId))
+                if (socio != null) call.respond(HttpStatusCode.OK, socio)
+                else call.respond(HttpStatusCode.NotFound, "Socio no encontrado")
+            } catch (e: Exception) {
+                call.application.log.error("Error obteniendo socio por id", e)
+                call.respond(HttpStatusCode.InternalServerError, "Error al obtener socio")
             }
         }
 
@@ -111,34 +87,30 @@ fun Route.socioRoutes() {
                 if (resultado.socios.isEmpty()) {
                     call.respond(HttpStatusCode.NoContent)
                 } else {
-                    val sociosDto = resultado.socios.map { socio ->
+                    val sociosDto = resultado.socios.map { s ->
                         SocioDTO(
-                            socioId        = socio.socioId,
-                            nombre         = socio.nombre,
-                            apellido       = socio.apellido,
-                            alias          = socio.alias,
-                            email          = socio.email,
-                            telefono       = socio.telefono,
-                            dni            = socio.dni,
-                            estado         = socio.estado,
-                            numSocioBoca   = socio.numSocioBoca,
-                            fechaInicio    = socio.fechaInicio,
-                            direccion      = socio.direccion,
-                            fechaDeBaja    = socio.fechaDeBaja,
-                            cobradorNombre = socio.cobradorNombre,
-                            tipoPeñaNombre = socio.tipoPeñaNombre,
-                            tipoBocaNombre = socio.tipoBocaNombre,
-                            localidadNombre= socio.localidadNombre
+                            socioId        = s.socioId,
+                            nombre         = s.nombre,
+                            apellido       = s.apellido,
+                            alias          = s.alias,
+                            email          = s.email,
+                            telefono       = s.telefono,
+                            dni            = s.dni,
+                            estado         = s.estado,
+                            numSocioBoca   = s.numSocioBoca,
+                            fechaInicio    = s.fechaInicio,
+                            direccion      = s.direccion,
+                            fechaDeBaja    = s.fechaDeBaja,
+                            cobradorNombre = s.cobradorNombre,
+                            tipoPeñaNombre = s.tipoPeñaNombre,
+                            tipoBocaNombre = s.tipoBocaNombre,
+                            localidadNombre= s.localidadNombre
                         )
                     }
-
-                    call.respond(
-                        HttpStatusCode.OK,
-                        SociosPage(page = page, size = size, total = resultado.total, socios = sociosDto)
-                    )
+                    call.respond(HttpStatusCode.OK, SociosPage(page = page, size = size, total = resultado.total, socios = sociosDto))
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                call.application.log.error("Error listando socios", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener los socios"))
             }
         }
@@ -148,16 +120,12 @@ fun Route.socioRoutes() {
             if (!requirePerm(call, "socios:gestionar")) return@delete
             val socioId = call.parameters["socio_id"]?.toIntOrNull()
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, mapOf("error" to "ID inválido"))
-
             try {
                 val eliminado = socioRepository.eliminarPorId(socioId)
-                if (eliminado) {
-                    call.respond(HttpStatusCode.OK, mapOf("message" to "Socio eliminado exitosamente"))
-                } else {
-                    call.respond(HttpStatusCode.NotFound, mapOf("error" to "Socio no encontrado"))
-                }
+                if (eliminado) call.respond(HttpStatusCode.OK, mapOf("message" to "Socio eliminado exitosamente"))
+                else           call.respond(HttpStatusCode.NotFound, mapOf("error" to "Socio no encontrado"))
             } catch (e: Exception) {
-                e.printStackTrace()
+                call.application.log.error("Error eliminando socio", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al eliminar el socio"))
             }
         }
@@ -181,7 +149,7 @@ fun Route.socioRoutes() {
                 val socioActualizado = actSocioHandler.actualizarSocio(socioParaActualizar)
                 call.respond(HttpStatusCode.OK, socioActualizado)
             } catch (e: Exception) {
-                e.printStackTrace()
+                call.application.log.error("Error actualizando socio", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al actualizar socio"))
             }
         }
@@ -195,16 +163,11 @@ fun Route.socioRoutes() {
             val existe = socioRepository.findById(socioId)
                 ?: return@patch call.respond(HttpStatusCode.NotFound, "Socio no encontrado")
 
-            val resultado = socioRepository.darDeBajaPorId(socioId)
-            if (!resultado) {
-                call.respond(HttpStatusCode.InternalServerError, "Error al dar de baja el socio")
-                return@patch
-            }
+            val ok = socioRepository.darDeBajaPorId(socioId)
+            if (!ok) return@patch call.respond(HttpStatusCode.InternalServerError, "Error al dar de baja el socio")
 
             // Solo si hay fechaDeBaja, generamos cuotas desde esa fecha
-            existe.fechaDeBaja?.let { fecha ->
-                cuotaService.generarCuotasDesdeFecha(socioId, fecha)
-            }
+            existe.fechaDeBaja?.let { fecha -> cuotaService.generarCuotasDesdeFecha(socioId, fecha) }
 
             call.respond(HttpStatusCode.OK, mapOf("mensaje" to "Socio dado de baja correctamente"))
         }
@@ -217,17 +180,11 @@ fun Route.socioRoutes() {
             val filtro = call.request.queryParameters["filtro"]
             try {
                 val resultado = socioRepository.obtenerPaginadoYFiltrado(limit, offset, filtro, estado = false)
-                if (resultado.socios.isEmpty()) {
-                    call.respond(HttpStatusCode.NoContent)
-                } else {
-                    call.respond(HttpStatusCode.OK, resultado)
-                }
+                if (resultado.socios.isEmpty()) call.respond(HttpStatusCode.NoContent)
+                else call.respond(HttpStatusCode.OK, resultado)
             } catch (e: Exception) {
-                e.printStackTrace()
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Error al obtener los socios dados de baja")
-                )
+                call.application.log.error("Error listando socios dados de baja", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener los socios dados de baja"))
             }
         }
 
@@ -245,11 +202,8 @@ fun Route.socioRoutes() {
             }
 
             val reactivado = socioRepository.reactivarSocio(id)
-            if (!reactivado) {
-                return@patch call.respond(HttpStatusCode.InternalServerError, "Error al reactivar socio")
-            }
+            if (!reactivado) return@patch call.respond(HttpStatusCode.InternalServerError, "Error al reactivar socio")
 
-            // Ya validamos que no es null → usar !!
             cuotaService.generarCuotasDesdeFecha(id, socio.fechaDeBaja!!)
             call.respond(HttpStatusCode.OK, "Socio reactivado y cuotas generadas desde la fecha de baja")
         }
@@ -261,11 +215,8 @@ fun Route.socioRoutes() {
                 val total = socioRepository.contarPorEstado(true)
                 call.respond(HttpStatusCode.OK, mapOf("total" to total))
             } catch (e: Exception) {
-                e.printStackTrace()
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Error al obtener total de socios activos")
-                )
+                call.application.log.error("Error total activos", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener total de socios activos"))
             }
         }
 
@@ -275,11 +226,8 @@ fun Route.socioRoutes() {
                 val total = socioRepository.contarPorEstado(false)
                 call.respond(HttpStatusCode.OK, mapOf("total" to total))
             } catch (e: Exception) {
-                e.printStackTrace()
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Error al obtener total de socios dados de baja")
-                )
+                call.application.log.error("Error total bajas", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error al obtener total de socios dados de baja"))
             }
         }
     }

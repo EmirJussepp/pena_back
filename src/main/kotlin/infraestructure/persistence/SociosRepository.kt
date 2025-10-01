@@ -228,7 +228,7 @@ override fun save(socio: Socio): Socio {
             }
         }
     }
-fun darDeBajaPorId(socioId: Int): Boolean {
+override fun darDeBajaPorId(socioId: Int): Boolean {
     return transaction(database) {
         val ahora = LocalDateTime.now()
         val actualizados = Socios.update({ Socios.socioId eq socioId }) {
@@ -256,7 +256,7 @@ fun darDeBajaPorId(socioId: Int): Boolean {
     }
 
 
-    fun reactivarSocio(socioId: Int): Boolean {
+override fun reactivarSocio(socioId: Int): Boolean {
         return transaction(database) {
             val actualizado = Socios.update({ Socios.socioId eq socioId }) {
                 it[estado] = true
@@ -360,7 +360,7 @@ override fun obtenerPrecioTipoPeña(tipoPeñaId: Int): BigDecimal? {
         }
     }
 
-    fun eliminarPorId(socioId: Int): Boolean {
+override fun eliminarPorId(socioId: Int): Boolean {
         return transaction(database) {
             // Primero eliminamos las cuotas asociadas si existen
             Cuotas.deleteWhere { Cuotas.socioId eq socioId }

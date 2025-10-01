@@ -4,19 +4,19 @@ package com.example.infraestructure.http.routes
 import com.example.domain.dto.LocalidadSyncRes
 import com.example.domain.dto.LocalidadSyncReq
 import com.example.infraestructure.persistence.LocalidadRepository
-import com.example.infraestructure.persistence.connectToMySql
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.http.*
-import org.jetbrains.exposed.sql.Database
 
-fun Route.localidadRoutes() {
-    val database: Database = application.connectToMySql()
-        ?: error("Error connecting to MySQL database")
-    val localidadRepository = LocalidadRepository(database)
-
+/**
+ * Rutas de localidades recibiendo el repositorio ya inicializado.
+ * No abre conexiones ni usa connectToMySql.
+ */
+fun Route.localidadRoutes(
+    localidadRepository: LocalidadRepository
+) {
     route("/localidades") {
 
         // === Búsqueda para el autocomplete (BD) ===
@@ -34,12 +34,10 @@ fun Route.localidadRoutes() {
 
                 call.respond(HttpStatusCode.OK, localidades)
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Parámetros inválidos")))
             } catch (e: Exception) {
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Error en el servidor")
-                )
+                call.application.log.error("Error en GET /localidades", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
         }
 
@@ -48,11 +46,10 @@ fun Route.localidadRoutes() {
             try {
                 val body = call.receive<LocalidadSyncReq>()
                 if (body.nombre.isBlank() || body.provincia.isBlank()) {
-                    call.respond(
+                    return@post call.respond(
                         HttpStatusCode.BadRequest,
                         mapOf("error" to "nombre y provincia son obligatorios")
                     )
-                    return@post
                 }
 
                 val id = localidadRepository.upsertAndGetId(
@@ -63,11 +60,8 @@ fun Route.localidadRoutes() {
 
                 call.respond(HttpStatusCode.OK, LocalidadSyncRes(localidadId = id))
             } catch (e: Exception) {
-                println("Error /localidades/sync: ${e.message}")
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    mapOf("error" to "Error en el servidor")
-                )
+                call.application.log.error("Error en POST /localidades/sync", e)
+                call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
         }
     }

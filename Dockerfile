@@ -1,14 +1,43 @@
-FROM openjdk:21-jdk-slim
+# ---------- build stage ----------
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /workspace
 
+# Copiamos primero wrapper y archivos de build para cachear dependencias
+COPY gradle gradle
+COPY gradlew .
+COPY settings.gradle.kts .
+COPY build.gradle.kts .
 
-# Establece el directorio de trabajo dentro del contenedor
+# Asegurar permisos de ejecución
+RUN chmod +x gradlew
+
+# Descarga de dependencias (cache-friendly)
+RUN ./gradlew --no-daemon dependencies || true
+
+# Ahora copiamos el resto del código
+COPY . .
+
+# Generar fat-jar => build/libs/app.jar
+# (Asegurate en build.gradle.kts de tener tasks.shadowJar { archiveFileName.set("app.jar") })
+RUN ./gradlew --no-daemon clean shadowJar
+
+# ---------- runtime stage ----------
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Copia el archivo JAR desde el directorio de construcción de tu máquina local al contenedor
-COPY build/libs/ktor-socios-0.0.1.jar /app/ktor-socios-all.jar
+# User no-root
+RUN addgroup -S app && adduser -S app -G app
+USER app
 
-# Expone el puerto que utilizará tu aplicación
-EXPOSE 8081
+# Copiamos el jar
+COPY --from=build /workspace/build/libs/app.jar /app/app.jar
 
-# Comando para ejecutar la aplicación Ktor en el contenedor
-CMD ["java", "-jar", "/app/ktor-socios-all.jar"]
+# Puerto para Railway (lo expone el contenedor; Railway inyecta PORT)
+ENV PORT=8080
+EXPOSE 8080
+
+# Flags de memoria para contenedores (ajustan heap automáticamente)
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+
+# Arranque: forzamos host/port por system properties (Ktor los respeta)
+CMD ["sh", "-c", "java -Dfile.encoding=UTF-8 -Dio.ktor.development=false -Dktor.deployment.host=0.0.0.0 -Dktor.deployment.port=${PORT} -jar /app/app.jar"]

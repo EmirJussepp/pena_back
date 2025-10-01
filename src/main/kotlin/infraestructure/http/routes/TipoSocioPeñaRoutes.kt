@@ -6,43 +6,40 @@ import com.example.application.command.SociosPeña.CreateSociosPeñaCommand
 import com.example.application.commandhandler.SociosPeña.ActualizarPrecioHandler
 import com.example.application.commandhandler.SociosPeña.CreateSociosPeñaCommandHandler
 import com.example.infraestructure.persistence.SociosPeñaRepository
-import com.example.infraestructure.persistence.connectToMySql
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.sql.Database
 
-// 👇 con ñ y extendiendo Route
-fun Route.socioPeñaRoutes() {
-    val database: Database = application.connectToMySql()
-        ?: error("Error connecting to MySQL database")
-
-    val sociosPeñaRepository   = SociosPeñaRepository(database)
+/**
+ * Rutas de tipos de socio de peña recibiendo el repositorio ya inicializado.
+ * No abre conexiones ni usa connectToMySql.
+ */
+fun Route.socioPeñaRoutes(
+    sociosPeñaRepository: SociosPeñaRepository
+) {
     val createSocioPeñaHandler = CreateSociosPeñaCommandHandler(sociosPeñaRepository)
     val actualizarPrecioHandler = ActualizarPrecioHandler(sociosPeñaRepository)
 
-    // dejo el path sin ñ para evitar problemas de URL y proxies
+    // Path sin ñ para evitar problemas en URL/proxies
     route("/sociospena") {
 
-        // Crear tipo socio peña
+        // POST /sociospena
         post {
             try {
                 val body = call.receive<CreateSociosPeñaCommand>()
-                println("Recibido: $body")
                 createSocioPeñaHandler.handle(body)
-                println("SocioPeña insertado correctamente")
                 call.respond(HttpStatusCode.Created, mapOf("message" to "Socio de Peña creado exitosamente"))
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
             } catch (e: Exception) {
-                println("Error: ${e.message}")
+                call.application.log.error("Error creando tipo de socio peña", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
         }
 
-        // Actualizar precio
+        // PATCH /sociospena/precio/{id}
         patch("/precio/{id}") {
             try {
                 val id = call.parameters["id"]?.toIntOrNull()
@@ -57,28 +54,27 @@ fun Route.socioPeñaRoutes() {
                 actualizarPrecioHandler.handle(command)
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Tipo de socio actualizado con éxito"))
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
             } catch (e: Exception) {
-                println("❌ Error: ${e.message}")
+                call.application.log.error("Error actualizando precio socio peña", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error interno al actualizar el tipo"))
             }
         }
 
-        // Listar
+        // GET /sociospena
         get {
             try {
                 val lista = sociosPeñaRepository.obtenerTodos()
-                println("📤 Enviando lista de tipos de socio peña: $lista")
                 call.respond(HttpStatusCode.OK, lista)
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Parámetros inválidos")))
             } catch (e: Exception) {
-                println("❌ Error al obtener tipos de socio peña: ${e.message}")
+                call.application.log.error("Error listando tipos de socio peña", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error en el servidor"))
             }
         }
 
-        // Eliminar
+        // DELETE /sociospena/{id}
         delete("{id}") {
             try {
                 val id = call.parameters["id"]?.toIntOrNull()
@@ -87,9 +83,9 @@ fun Route.socioPeñaRoutes() {
                 sociosPeñaRepository.eliminar(id)
                 call.respond(HttpStatusCode.OK, mapOf("message" to "Tipo de socio eliminado con éxito"))
             } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to (e.message ?: "Datos inválidos")))
             } catch (e: Exception) {
-                println("❌ Error al eliminar tipo socio peña: ${e.message}")
+                call.application.log.error("Error eliminando tipo socio peña", e)
                 call.respond(HttpStatusCode.InternalServerError, mapOf("error" to "Error interno al eliminar el tipo"))
             }
         }
