@@ -10,8 +10,8 @@ import io.ktor.server.plugins.cors.routing.*
 fun Application.configureHTTP() {
     install(CORS) {
         allowHost("boquensesocios.up.railway.app", schemes = listOf("https"))
+        allowHost("www.boquensesocios.up.railway.app", schemes = listOf("https"))
 
-        // Métodos que realmente usás
         allowMethod(HttpMethod.Options)
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Post)
@@ -19,10 +19,11 @@ fun Application.configureHTTP() {
         allowMethod(HttpMethod.Delete)
         allowMethod(HttpMethod.Patch)
 
-        // Headers comunes + custom
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
         allowHeader("X-User-Id")
+        allowHeader(HttpHeaders.Accept)          // <- útil
+        allowHeader("X-Requested-With")          // <- si lo usás
 
         allowCredentials = true
         allowNonSimpleContentTypes = true
