@@ -78,5 +78,6 @@ fun Application.module() {
     configureSecurity()
     configureDatabases(db)
     configureSerialization()
+    configureHTTP()
     configureRouting()
 }
