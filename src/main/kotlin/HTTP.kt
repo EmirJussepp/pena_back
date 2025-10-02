@@ -10,10 +10,16 @@ import io.ktor.server.plugins.cors.routing.*
 fun Application.configureHTTP() {
     install(CORS) {
         allowHost("boquensesocios.up.railway.app", schemes = listOf("https"))
+
+        // Métodos que realmente usás
         allowMethod(HttpMethod.Options)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
         allowMethod(HttpMethod.Put)
         allowMethod(HttpMethod.Delete)
         allowMethod(HttpMethod.Patch)
+
+        // Headers comunes + custom
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
         allowHeader("X-User-Id")
@@ -21,9 +27,8 @@ fun Application.configureHTTP() {
         allowCredentials = true
         allowNonSimpleContentTypes = true
 
-        // Solo permitir todo si estoy en modo dev
         if (this@configureHTTP.environment.developmentMode) {
-            anyHost()
+            anyHost() // Solo en dev
         }
     }
 }
