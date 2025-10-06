@@ -12,7 +12,11 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class ViajesPagosRepository(private val database: Database) : IViajesPagosContract {
-
+    init {
+        transaction(database) {
+            SchemaUtils.create(ViajesPagos) // Crea la tabla si no existe
+        }
+    }
     override fun save(viajePago: ViajePago): ViajePago {
         return transaction(database) {
             val insertedId = ViajesPagos.insert {

@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 import com.example.domain.contracts.IViajesBombonera
 import com.example.domain.dto.ViajeBomboneraDto
+import com.example.domain.entities.Movimientos
 import com.example.domain.entities.ViajesPagos
 
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
@@ -19,7 +20,11 @@ import java.time.LocalDate
 
 
 class ViajeBomboneraRepository(private val database: Database) : IViajesBombonera {
-
+    init {
+        transaction(database) {
+            SchemaUtils.create(ViajesBombonera) // Crea la tabla si no existe
+        }
+    }
     override fun save(viajeBombonera: ViajeBombonera): ViajeBombonera {
         return transaction(database) {
 

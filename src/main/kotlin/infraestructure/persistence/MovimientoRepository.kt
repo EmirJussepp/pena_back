@@ -2,6 +2,7 @@ package com.example.infraestructure.persistence
 import com.example.domain.entities.Movimiento
 import com.example.domain.entities.Movimientos
 import com.example.domain.contracts.MovimientoContract
+import com.example.domain.entities.Pagos
 
 
 import org.jetbrains.exposed.sql.*
@@ -17,7 +18,11 @@ import java.time.YearMonth
 
 
 class MovimientoRepository(private val database: Database) : MovimientoContract {
-
+    init {
+        transaction(database) {
+            SchemaUtils.create(Movimientos) // Crea la tabla si no existe
+        }
+    }
     // Guardar o insertar un nuevo movimiento
     override suspend fun save(movimiento: Movimiento): Movimiento {
         return transaction(database) {
