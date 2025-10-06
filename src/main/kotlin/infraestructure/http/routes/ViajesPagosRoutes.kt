@@ -22,11 +22,10 @@ fun Route.viajesPagosRoutes(
     val viajesPagosHandler = ViajePagoCommandHandler(viajesPagosRepository)
     val actualizarViajePagoHandler = ActualizarViajePagoHandler(viajesPagosRepository)
 
-    // POST /viajesPagos  (crear pago)
     post("/viajesPagos") {
         try {
             val command = call.receive<CreateViajesPagosCommand>()
-            // command.validate()  // descomentar si tu comando implementa validate()
+            // command.validate()
             viajesPagosHandler.handle(command)
             call.respond(HttpStatusCode.Created, "El pago del viaje se ha registrado correctamente")
         } catch (e: IllegalArgumentException) {
@@ -51,13 +50,14 @@ fun Route.viajesPagosRoutes(
         }
     }
 
-    // GET /viajePagosFull?viejeId=&page=&pageSize=  (detalle paginado)
+    // GET /viajePagosFull?vIaJeId=&page=&pageSize=  (detalle paginado)
     get("/viajePagosFull") {
         try {
             val viajeId = call.request.queryParameters["viajeId"]?.toIntOrNull()
                 ?: return@get call.respond(HttpStatusCode.BadRequest, "Falta viajeId")
-            val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
-            val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 10
+
+            val page = (call.request.queryParameters["page"]?.toIntOrNull() ?: 1).coerceAtLeast(1)
+            val pageSize = (call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 10).coerceIn(1, 200)
 
             val resultado = viajesPagosRepository.findByViajeIdConPaginacionFull(viajeId, page, pageSize)
             call.respond(resultado)
