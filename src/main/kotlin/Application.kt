@@ -5,6 +5,7 @@ import com.example.infraestructure.persistence.DatabaseProvider
 import com.example.infraestructure.persistence.configureDatabases
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
+import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import kotlinx.serialization.json.Json
@@ -34,7 +35,7 @@ fun Application.module() {
         )
     }
 
-    // ---- Config DB: PRIORIDAD -> MYSQL* (Railway) → DB_* → application.conf → defaults ----
+    // ---- Config DB: prioridad -> MYSQL* (Railway) → DB_* → application.conf → defaults ----
     val cfg = environment.config
 
     val mysqlHost = System.getenv("MYSQLHOST")
@@ -56,7 +57,13 @@ fun Application.module() {
 
     // Si Railway nos dio host, armamos el JDBC con eso; si no, probamos DB_URL; si no, default local
     val urlFromMysqlVars = mysqlHost?.let {
-        "jdbc:mysql://$it:$mysqlPort/$mysqlDb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true&characterEncoding=UTF-8&useUnicode=true"
+        "jdbc:mysql://$it:$mysqlPort/$mysqlDb" +
+                "?useSSL=false" +
+                "&serverTimezone=UTC" +
+                "&allowPublicKeyRetrieval=true" +
+                "&characterEncoding=UTF-8" +
+                "&useUnicode=true" +
+                "&rewriteBatchedStatements=true"
     }
 
     val url = urlFromMysqlVars
@@ -64,15 +71,24 @@ fun Application.module() {
         ?: cfg.propertyOrNull("db.mysql.url")?.getString()
         ?: "jdbc:mysql://localhost:3306/pena_socios?useSSL=false&serverTimezone=UTC"
 
+    // --- Tamaño del pool desde ENV (default 5) ---
+    val poolMax = (System.getenv("DB_POOL_MAX") ?: "5").toIntOrNull() ?: 5
+
     // ---- DB singleton ----
     val db = DatabaseProvider.init(
         url  = url,
         user = mysqlUser,
         pass = mysqlPass,
         driver = "com.mysql.cj.jdbc.Driver",
-        poolSize = 10
+        poolSize = poolMax
     )
-    log.info("✅ Pool Hikari inicializado (host=${mysqlHost ?: "fallback"}, db=$mysqlDb)")
+    log.info("✅ Pool Hikari inicializado (host=${mysqlHost ?: "fallback"}, db=$mysqlDb, max=$poolMax)")
+
+    // --- Hook: cerrar pool al apagar (deploy/redeploy/sleep) ---
+    environment.monitor.subscribe(ApplicationStopping) {
+        log.info("Recibido ApplicationStopping → cerrando DataSource")
+        com.example.infraestructure.persistence.DatabaseProvider.close()
+    }
 
     // ---- Ktor plugins & app wiring ----
     configureSecurity()
