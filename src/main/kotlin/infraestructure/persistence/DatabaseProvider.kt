@@ -15,50 +15,60 @@ object DatabaseProvider {
         user: String,
         pass: String,
         driver: String = "com.mysql.cj.jdbc.Driver",
-        poolSize: Int = 10 // ajustado a algo chico
+        poolSize: Int = 3
     ): Database {
         instance?.let { return it }
-
         synchronized(this) {
             instance?.let { return it }
 
-            val hikariCfg = HikariConfig().apply {
+            val cfg = HikariConfig().apply {
                 jdbcUrl = url
                 username = user
                 password = pass
                 driverClassName = driver
 
-                // --- Sleep-friendly ---
+                // ---- Ahorro / scale-to-zero ----
                 maximumPoolSize = poolSize
-                minimumIdle = 0                   // no mantengas conexiones ociosas
-                idleTimeout = 120_000              // 60s para cerrar ociosas (podés subir a 120_000)
-                keepaliveTime = 0                 // evita heartbeats
-                maxLifetime = 15 * 60_000         // recambio prudente (15 min)
-                connectionTimeout = 10_000        // espera razonable al pedir conexión
-                // Opcional para debug:
-                // leakDetectionThreshold = 10_000
+                minimumIdle = 0
+                idleTimeout = 60_000          // 60s sin uso => cierra conexión
+                maxLifetime = 120_000         // renueva conexiones seguido
+                connectionTimeout = 10_000
+                validationTimeout = 5_000
+
+                // MySQL quality-of-life
+                addDataSourceProperty("cachePrepStmts", "true")
+                addDataSourceProperty("prepStmtCacheSize", "250")
+                addDataSourceProperty("prepStmtCacheSqlLimit", "2048")
+                addDataSourceProperty("useServerPrepStmts", "true")
+                addDataSourceProperty("rewriteBatchedStatements", "true")
+                addDataSourceProperty("tcpKeepAlive", "false")
+                addDataSourceProperty("socketTimeout", "60000")
+                addDataSourceProperty("connectTimeout", "10000")
+                // Charset explícito
+                addDataSourceProperty("useUnicode", "true")
+                addDataSourceProperty("characterEncoding", "utf8")
             }
 
-            val ds = HikariDataSource(hikariCfg)
-            val db = Database.connect(ds)
-
+            val ds = HikariDataSource(cfg)
             dataSource = ds
+            val db = Database.connect(ds)
             instance = db
-            log.info("✅ Conexión a la base de datos establecida correctamente (sleep-friendly)")
+            log.info("✅ DB conectada (poolSize=$poolSize, minIdle=0, idleTimeout=60s)")
             return db
         }
     }
 
-    fun close() {
+    fun shutdown() {
         synchronized(this) {
-            runCatching { dataSource?.close() }
-                .onSuccess { log.info("🛑 DataSource cerrado correctamente") }
-                .onFailure { log.warn("Error cerrando DataSource", it) }
-            dataSource = null
-            instance = null
+            try {
+                dataSource?.close()
+                log.info("🛑 Hikari DataSource cerrado")
+            } catch (e: Exception) {
+                log.warn("Error cerrando DataSource", e)
+            } finally {
+                dataSource = null
+                instance = null
+            }
         }
     }
-
-    fun get(): Database =
-        instance ?: error("DatabaseProvider aún no fue inicializado. Llamá a init() primero.")
 }
