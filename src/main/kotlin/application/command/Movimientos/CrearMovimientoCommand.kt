@@ -6,6 +6,7 @@ package com.example.application.command.Movimientos
 import com.example.domain.entities.BigDecimalSerializer
 import java.math.BigDecimal
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.serializers.LocalDateTimeIso8601Serializer
 
 import kotlinx.serialization.Contextual
 
@@ -17,6 +18,7 @@ data class CrearMovimientoCommand(
     @Contextual val monto: BigDecimal,
     val descripcion: String,
     val tipo: String, // "ingreso" o "egreso"
+    @Serializable(with = LocalDateTimeIso8601Serializer::class)
     val fecha: LocalDateTime, // Para la fecha del movimiento
     val metodoPagoId: Int
 ) {
