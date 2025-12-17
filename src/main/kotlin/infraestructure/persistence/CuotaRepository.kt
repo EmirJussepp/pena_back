@@ -149,52 +149,49 @@ override fun existeCuotaEnMes(socioId: Int, mes: Int, anio: Int): Boolean = tran
         pageSize: Int
     ): List<CuotaDTO> {
         return transaction {
-            val ahora = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-            val finDeHoy = LocalDateTime(ahora.year, ahora.monthNumber, ahora.dayOfMonth, 23, 59, 59)
-            val finDeHoyJava = finDeHoy.toJavaLocalDateTime()
 
-            // Condición base: cuotas impagas vencidas del cobrador
+            // 🔹 SOLO impagas del cobrador (SIN filtrar por hoy)
             var condicion = (Cuotas.estado eq false) and
-                    (Cuotas.fechaVencimiento lessEq finDeHoyJava) and
                     (Socios.cobradorId eq cobradorId)
 
-            // Filtro por mes y año usando rango de fechas
+            // 🔹 Filtro por mes/año (PERÍODO, igual que por DNI)
             if (anio != null && mes != null) {
-                val fechaInicio = LocalDateTime(anio, mes, 1, 0, 0).toJavaLocalDateTime()
-                val fechaFin = LocalDateTime(
+                val desde = LocalDateTime(anio, mes, 1, 0, 0).toJavaLocalDateTime()
+                val hasta = LocalDateTime(
                     anio,
                     mes,
                     Month.of(mes).length(Year.isLeap(anio.toLong())),
                     23, 59, 59
                 ).toJavaLocalDateTime()
-                condicion = condicion and (Cuotas.fechaVencimiento.between(fechaInicio, fechaFin))
+                condicion = condicion and (Cuotas.fechaVencimiento.between(desde, hasta))
+
             } else if (anio != null) {
-                val fechaInicio = LocalDateTime(anio, 1, 1, 0, 0).toJavaLocalDateTime()
-                val fechaFin = LocalDateTime(anio, 12, 31, 23, 59, 59).toJavaLocalDateTime()
-                condicion = condicion and (Cuotas.fechaVencimiento.between(fechaInicio, fechaFin))
+                val desde = LocalDateTime(anio, 1, 1, 0, 0).toJavaLocalDateTime()
+                val hasta = LocalDateTime(anio, 12, 31, 23, 59, 59).toJavaLocalDateTime()
+                condicion = condicion and (Cuotas.fechaVencimiento.between(desde, hasta))
+
             } else if (mes != null) {
-                val fechaInicio = LocalDateTime(ahora.year, mes, 1, 0, 0).toJavaLocalDateTime()
-                val fechaFin = LocalDateTime(
-                    ahora.year,
+                val anioActual = Clock.System.now()
+                    .toLocalDateTime(TimeZone.currentSystemDefault()).year
+
+                val desde = LocalDateTime(anioActual, mes, 1, 0, 0).toJavaLocalDateTime()
+                val hasta = LocalDateTime(
+                    anioActual,
                     mes,
-                    Month.of(mes).length(Year.isLeap(ahora.year.toLong())),
+                    Month.of(mes).length(Year.isLeap(anioActual.toLong())),
                     23, 59, 59
                 ).toJavaLocalDateTime()
-                condicion = condicion and (Cuotas.fechaVencimiento.between(fechaInicio, fechaFin))
+                condicion = condicion and (Cuotas.fechaVencimiento.between(desde, hasta))
             }
 
-            // Filtro por DNI opcional
+            // 🔹 DNI opcional
             if (!dni.isNullOrBlank()) {
                 condicion = condicion and (Socios.dni eq dni)
             }
 
-            println("⚙️ Filtros => cobradorId: $cobradorId, mes: $mes, año: $anio, dni: $dni")
-            println("📜 Condición Exposed: $condicion")
-
             val offset = ((page - 1).coerceAtLeast(0) * pageSize).toLong()
 
-            // Base query con slice para no traer columnas innecesarias
-            val base = (Cuotas innerJoin Socios)
+            val filas = (Cuotas innerJoin Socios)
                 .slice(
                     Cuotas.cuotaId,
                     Socios.socioId,
@@ -208,13 +205,6 @@ override fun existeCuotaEnMes(socioId: Int, mes: Int, anio: Int): Boolean = tran
                     Socios.telefono
                 )
                 .select { condicion }
-
-            // (opcional) total para debug o paginación en el controlador/respuesta
-            val total = base.count()
-            println("🔢 Total cuotas (sin paginar): $total")
-
-            // Página actual desde la DB
-            val filas = base
                 .orderBy(Cuotas.fechaVencimiento to SortOrder.ASC)
                 .limit(pageSize, offset)
                 .toList()
