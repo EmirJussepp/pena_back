@@ -64,28 +64,54 @@ class CuotaService(
         beneficioRepository.actualizarBeneficioSiCorresponde(socio.socioId)
         println("✅ Cuota inicial generada para el socio ${socio.socioId} - $mesActual/$anioActual")
     }
-    fun generarCuotasMensuales() {
-        val sociosActivos = socioRepository.obtenerSociosActivos()
+//    fun generarCuotasMensuales() {
+//        val sociosActivos = socioRepository.obtenerSociosActivos()
+//
+//        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+//        val fechaEmision = now
+//
+//        val fechaVencimiento = now.date
+//            .plus(1, DateTimeUnit.MONTH)
+//            .let { LocalDate(it.year, it.month, 1) }
+//            .atTime(0, 0)
+//
+//        val mes = fechaEmision.monthNumber
+//        val anio = fechaEmision.year
+//
+//
+//        for (socio in sociosActivos) {
+//            if (!cuotaRepository.existeCuotaEnMes(socio.socioId!!, mes, anio)) {
+//                crearNuevaCuota(socio, fechaEmision, fechaVencimiento)
+//            }
+//        }
+//    }
+fun generarCuotasMensuales() {
+    val sociosActivos = socioRepository.obtenerSociosActivos()
 
-        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-        val fechaEmision = now
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    val fechaEmision = now
 
-        val fechaVencimiento = now.date
-            .plus(1, DateTimeUnit.MONTH)
-            .let { LocalDate(it.year, it.month, 1) }
-            .atTime(0, 0)
+    // 👉 La cuota siempre vence el 1 del mes siguiente
+    val fechaVencimiento = now.date
+        .plus(1, DateTimeUnit.MONTH)
+        .let { LocalDate(it.year, it.month, 1) }
+        .atTime(0, 0)
 
-        val mes = fechaEmision.monthNumber
-        val anio = fechaEmision.year
+    // ✅ USAR EL PERÍODO DEL VENCIMIENTO
+    val mes = fechaVencimiento.monthNumber
+    val anio = fechaVencimiento.year
 
-//        val mes = fechaVencimiento.monthNumber  // <-- usar mes y año de fechaVencimiento
-//        val anio = fechaVencimiento.year
-        for (socio in sociosActivos) {
-            if (!cuotaRepository.existeCuotaEnMes(socio.socioId!!, mes, anio)) {
-                crearNuevaCuota(socio, fechaEmision, fechaVencimiento)
-            }
+    println("🧾 Generando cuotas para período $mes/$anio (venc: $fechaVencimiento)")
+
+    for (socio in sociosActivos) {
+        val socioId = socio.socioId ?: continue
+
+        if (!cuotaRepository.existeCuotaEnMes(socioId, mes, anio)) {
+            crearNuevaCuota(socio, fechaEmision, fechaVencimiento)
         }
     }
+}
+
 
 
     private fun crearNuevaCuota(socio: Socio, fechaEmision: LocalDateTime, fechaVencimiento: LocalDateTime) {
