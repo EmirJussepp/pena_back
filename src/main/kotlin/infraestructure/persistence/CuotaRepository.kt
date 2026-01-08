@@ -97,21 +97,17 @@ override fun marcarComoPagada(cuotaId: Int): Boolean = transaction(database) {
             (Cuotas.socioId eq socioId) and (Cuotas.estado eq false)
         }.map { rowToCuota(it) }
     }
+    override fun existeCuotaEnMes(socioId: Int, mes: Int, anio: Int): Boolean = transaction(database) {
+        val inicio = LocalDateTime.of(anio, mes, 1, 0, 0)
+        val fin = inicio.plusMonths(1)
 
-override fun existeCuotaEnMes(socioId: Int, mes: Int, anio: Int): Boolean = transaction(database) {
-    val fechaInicio = LocalDateTime.of(anio, mes, 1, 0, 0)
-    val fechaFin = fechaInicio.plusMonths(1)
+        Cuotas.select {
+            (Cuotas.socioId eq socioId) and
+                    (Cuotas.fechaVencimiento greaterEq inicio) and
+                    (Cuotas.fechaVencimiento less fin)
+        }.count() > 0
+    }
 
-    Cuotas.select {
-        (Cuotas.socioId eq socioId) and
-                (Cuotas.fechaEmision greaterEq fechaInicio) and
-                (Cuotas.fechaEmision less fechaFin)
-//        Cuotas.select {
-//            (Cuotas.socioId eq socioId) and
-//                    (Cuotas.fechaVencimiento greaterEq fechaInicio) and
-//                    (Cuotas.fechaVencimiento less fechaFin)
-    }.count() > 0
-}
 
 
     override fun obtenerPorId(cuotaId: Int): Cuota? = transaction(database) {

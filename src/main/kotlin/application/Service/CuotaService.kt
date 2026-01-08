@@ -64,27 +64,6 @@ class CuotaService(
         beneficioRepository.actualizarBeneficioSiCorresponde(socio.socioId)
         println("✅ Cuota inicial generada para el socio ${socio.socioId} - $mesActual/$anioActual")
     }
-//    fun generarCuotasMensuales() {
-//        val sociosActivos = socioRepository.obtenerSociosActivos()
-//
-//        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-//        val fechaEmision = now
-//
-//        val fechaVencimiento = now.date
-//            .plus(1, DateTimeUnit.MONTH)
-//            .let { LocalDate(it.year, it.month, 1) }
-//            .atTime(0, 0)
-//
-//        val mes = fechaEmision.monthNumber
-//        val anio = fechaEmision.year
-//
-//
-//        for (socio in sociosActivos) {
-//            if (!cuotaRepository.existeCuotaEnMes(socio.socioId!!, mes, anio)) {
-//                crearNuevaCuota(socio, fechaEmision, fechaVencimiento)
-//            }
-//        }
-//    }
 fun generarCuotasMensuales() {
     val sociosActivos = socioRepository.obtenerSociosActivos()
 
@@ -178,3 +157,24 @@ fun generarCuotasMensuales() {
 }
 
 
+//    fun generarCuotasMensuales() {
+//        val sociosActivos = socioRepository.obtenerSociosActivos()
+//
+//        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+//        val fechaEmision = now
+//
+//        val fechaVencimiento = now.date
+//            .plus(1, DateTimeUnit.MONTH)
+//            .let { LocalDate(it.year, it.month, 1) }
+//            .atTime(0, 0)
+//
+//        val mes = fechaEmision.monthNumber
+//        val anio = fechaEmision.year
+//
+//
+//        for (socio in sociosActivos) {
+//            if (!cuotaRepository.existeCuotaEnMes(socio.socioId!!, mes, anio)) {
+//                crearNuevaCuota(socio, fechaEmision, fechaVencimiento)
+//            }
+//        }
+//    }
