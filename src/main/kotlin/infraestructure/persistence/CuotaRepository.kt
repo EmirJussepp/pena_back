@@ -7,7 +7,7 @@ import com.example.domain.entities.Beneficios
 import com.example.domain.entities.Cuota
 import com.example.domain.entities.Cuotas
 import com.example.domain.entities.Socios
-//import com.example.infraestructure.persistence.BeneficioRepository
+
 import kotlinx.datetime.*
 
 import java.time.LocalDateTime
@@ -15,16 +15,19 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.between
+
 
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
+import java.time.LocalDateTime as JLocalDateTime
 
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+
 
 
 
 import java.math.BigDecimal
-import java.time.Year
+
 
 
 class CuotaRepository(
@@ -145,51 +148,54 @@ override fun marcarComoPagada(cuotaId: Int): Boolean = transaction(database) {
         pageSize: Int
     ): List<CuotaDTO> {
         return transaction {
-            val ahora = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-            val finDeHoy = LocalDateTime(ahora.year, ahora.monthNumber, ahora.dayOfMonth, 23, 59, 59)
-            val finDeHoyJava = finDeHoy.toJavaLocalDateTime()
+            val ahoraKx = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            val finDeHoyJava = JLocalDateTime.of(
+                ahoraKx.year, ahoraKx.monthNumber, ahoraKx.dayOfMonth, 23, 59, 59
+            )
 
-            // Condición base: cuotas impagas vencidas del cobrador
-            var condicion = (Cuotas.estado eq false) and
-                    (Cuotas.fechaVencimiento lessEq finDeHoyJava) and
-                    (Socios.cobradorId eq cobradorId)
+            // ✅ BASE: pendientes (0) del cobrador
+            var condicion = (Cuotas.estado eq false) and (Socios.cobradorId eq cobradorId)
 
-            // Filtro por mes y año usando rango de fechas
-            if (anio != null && mes != null) {
-                val fechaInicio = LocalDateTime(anio, mes, 1, 0, 0).toJavaLocalDateTime()
-                val fechaFin = LocalDateTime(
-                    anio,
-                    mes,
-                    Month.of(mes).length(Year.isLeap(anio.toLong())),
-                    23, 59, 59
-                ).toJavaLocalDateTime()
-                condicion = condicion and (Cuotas.fechaVencimiento.between(fechaInicio, fechaFin))
-            } else if (anio != null) {
-                val fechaInicio = LocalDateTime(anio, 1, 1, 0, 0).toJavaLocalDateTime()
-                val fechaFin = LocalDateTime(anio, 12, 31, 23, 59, 59).toJavaLocalDateTime()
-                condicion = condicion and (Cuotas.fechaVencimiento.between(fechaInicio, fechaFin))
-            } else if (mes != null) {
-                val fechaInicio = LocalDateTime(ahora.year, mes, 1, 0, 0).toJavaLocalDateTime()
-                val fechaFin = LocalDateTime(
-                    ahora.year,
-                    mes,
-                    Month.of(mes).length(Year.isLeap(ahora.year.toLong())),
-                    23, 59, 59
-                ).toJavaLocalDateTime()
-                condicion = condicion and (Cuotas.fechaVencimiento.between(fechaInicio, fechaFin))
+
+            // ✅ Período (mes/año) => vencimiento mes siguiente
+            fun rangoVencimientoPorPeriodo(m: Int, a: Int): Pair<JLocalDateTime, JLocalDateTime> {
+                val inicioVenc = JLocalDateTime.of(a, m, 1, 0, 0).plusMonths(1) // mes siguiente
+                val finVenc = JLocalDateTime.of(a, m, 1, 0, 0).plusMonths(2)   // fin exclusivo
+                return inicioVenc to finVenc
             }
 
-            // Filtro por DNI opcional
+            if (anio != null && mes != null) {
+                val (inicio, fin) = rangoVencimientoPorPeriodo(mes, anio)
+                condicion = condicion and
+                        (Cuotas.fechaVencimiento greaterEq inicio) and
+                        (Cuotas.fechaVencimiento less fin)
+
+            } else if (anio != null) {
+                // Año completo del período -> vencimientos: feb(anio) .. feb(anio+1)
+                val inicio = JLocalDateTime.of(anio, 1, 1, 0, 0).plusMonths(1)
+                val fin = JLocalDateTime.of(anio + 1, 1, 1, 0, 0).plusMonths(1)
+
+                condicion = condicion and
+                        (Cuotas.fechaVencimiento greaterEq inicio) and
+                        (Cuotas.fechaVencimiento less fin)
+
+            } else if (mes != null) {
+                val (inicio, fin) = rangoVencimientoPorPeriodo(mes, ahoraKx.year)
+                condicion = condicion and
+                        (Cuotas.fechaVencimiento greaterEq inicio) and
+                        (Cuotas.fechaVencimiento less fin)
+            }
+
+            // DNI opcional
             if (!dni.isNullOrBlank()) {
                 condicion = condicion and (Socios.dni eq dni)
             }
 
-            println("⚙️ Filtros => cobradorId: $cobradorId, mes: $mes, año: $anio, dni: $dni")
-            println("📜 Condición Exposed: $condicion")
+            // 🔁 Opcional: si querés SOLO vencidas, descomentá:
+            // condicion = condicion and (Cuotas.fechaVencimiento lessEq finDeHoyJava)
 
             val offset = ((page - 1).coerceAtLeast(0) * pageSize).toLong()
 
-            // Base query con slice para no traer columnas innecesarias
             val base = (Cuotas innerJoin Socios)
                 .slice(
                     Cuotas.cuotaId,
@@ -205,32 +211,24 @@ override fun marcarComoPagada(cuotaId: Int): Boolean = transaction(database) {
                 )
                 .select { condicion }
 
-            // (opcional) total para debug o paginación en el controlador/respuesta
-            val total = base.count()
-            println("🔢 Total cuotas (sin paginar): $total")
-
-            // Página actual desde la DB
-            val filas = base
+            base
                 .orderBy(Cuotas.fechaVencimiento to SortOrder.ASC)
                 .limit(pageSize, offset)
-                .toList()
-
-            filas.map {
-                CuotaDTO(
-                    cuotaId = it[Cuotas.cuotaId],
-                    socioId = it[Socios.socioId],
-                    nombreSocio = "${it[Socios.nombre]} ${it[Socios.apellido]}",
-                    dni = it[Socios.dni],
-                    monto = it[Cuotas.monto].toDouble(),
-                    fechaVencimiento = it[Cuotas.fechaVencimiento],
-                    estado = it[Cuotas.estado],
-                    direccionSocio = it[Socios.direccion] ?: "",
-                    telefonoSocio = it[Socios.telefono]
-                )
-            }
+                .map {
+                    CuotaDTO(
+                        cuotaId = it[Cuotas.cuotaId],
+                        socioId = it[Socios.socioId],
+                        nombreSocio = "${it[Socios.nombre]} ${it[Socios.apellido]}",
+                        dni = it[Socios.dni],
+                        monto = it[Cuotas.monto].toDouble(),
+                        fechaVencimiento = it[Cuotas.fechaVencimiento],
+                        estado = it[Cuotas.estado],
+                        direccionSocio = it[Socios.direccion] ?: "",
+                        telefonoSocio = it[Socios.telefono]
+                    )
+                }
         }
     }
-
 
 
     override fun actualizarCuotasNoPagadas(tipoPeñaId: Int, nuevoMonto: BigDecimal) {
